@@ -30,3 +30,16 @@
 - **Verdict:** APPROVED. Cross-stream batch is coherent: frontend components integrated cleanly, backend cue metadata stayed additive, and solution/test wiring is healthy.
 - **Validation:** `dotnet build` passed, `dotnet test` passed (11/11), frontend build passed, and lint returned only two pre-existing exhaustive-deps warnings in `App.tsx`.
 - **Risk to track:** New cue fields (`RecentEffectCue`, forced-target name metadata) are not yet directly asserted in mapper tests and are not yet consumed in frontend rendering, creating potential contract drift if evolved.
+
+### 2026-02-22: Phase2 + Standard Red-Effect Bugfix Review Gate
+- **Verdict:** APPROVED. Standard variant no longer applies red forced-target effect metadata; Evolution keeps red forced-target behavior and metadata intact.
+- **Validation:** `dotnet build` passed, `dotnet test` passed (13/13), frontend build passed, and lint remained at the same two existing exhaustive-deps warnings in `App.tsx`.
+- **Learning:** Guarding variant logic before effect routing and returning the post-evaluation revealed-wire snapshot prevents cross-variant leakage while preserving Evolution UX cues.
+
+### 2026-02-22: Phase 2 + Bugfix Batch Orchestration Complete
+- **Verdict:** APPROVED. Phase 2 UX slice production-ready; standard-vs-evolution bug fix enforced; all regression tests passing.
+- **Validation:** Frontend: Phase 2 modal/cues contract-compatible. Backend: Red effect strictly Evolution-only. Tests: 13/13 passing (11 original + 2 new regression pairs).
+- **Cross-agent coherence:** Hicks Phase 2 UX depends on Parker backend cue metadata; Parker enforces Evolution-only guard; Bishop tests lock variant compliance. All coordinated and approved.
+- **Decisions merged:** `decisions/inbox/` fully consolidated into `decisions.md` (5 files merged + deduped); inbox purged.
+- **Orchestration logs:** Written for Hicks (Phase 2 UX), Parker (bugfix), Bishop (regression tests). Session log captured.
+- **Recommendation:** Prioritize mapper/contract tests for `recentEffectCue` projection and forced-target metadata to prevent DTO drift in Phase 3.

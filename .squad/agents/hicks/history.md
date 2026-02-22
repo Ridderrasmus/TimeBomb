@@ -48,6 +48,19 @@
 - Dependencies: H1.1 gates all Phase 1 component work; Phase 1 integration gates Phase 2; responsive layout must stabilize before animation refactor (Phase 3)
 - Risk: H1.1 design complexity → Ripley decision Day 1 → defer complex animations if timeline blocked
 
+## 2026-02-22: Phase 2 Decision UX Implementation Complete
+**Status:** ✅ Implementation approved
+
+**Deliverable:** Phase 2 UI slice with pending-decision modal, effect cue rendering, and forced-target metadata integration
+
+**Key Outcomes:**
+- Pending-decision modal uses explicit two-step interaction (select color + confirm CTA) to prevent accidental instant resolves
+- Effect cue rendering prioritizes `game.recentEffectCue` with fallback to latest revealed wire `effect` field
+- Forced-target label integrated using backend `forcedTargetPlayerNameForNextTurn` with ID/name fallback for compatibility
+- Frontend build clean; lint warnings unchanged (2 baseline `react-hooks/exhaustive-deps` in App.tsx)
+- Phase 2 slice contract-compatible; no breaking changes to backend DTOs
+- Ripley approved; Phase 2 production-ready
+
 ## 2026-02-22: Phase 1 Gameplay UI Polish — Execution Slice 1
 - Implemented reusable in-match UI components in `frontend/src/components`:
   - `TurnStateProminence` for high-visibility round/turn/active-player state
@@ -58,3 +71,11 @@
 - Validation completed:
   - `npm --prefix .\frontend run build` ✅
   - `npm --prefix .\frontend run lint` ✅ (baseline 2 hook warnings in `App.tsx`, unchanged)
+
+## 2026-02-22: Phase 2 Decision + Effect UX Launch Slice
+- Reworked pending decision UX into a modal-style decision panel with explicit select-then-confirm flow, fixing the accidental one-click resolve behavior and giving clear selected-color feedback before submit.
+- Added a dedicated in-match effect cue surface that prefers backend `recentEffectCue` metadata and falls back to latest revealed wire effect data, including forced-target name/id cue details when available.
+- Kept all gameplay/network logic untouched (`ResolvePendingDecision`, reveal flow, hub contracts unchanged); changes are strictly UI-layer and mobile-safe.
+- Validation completed:
+  - `npm --prefix .\frontend run lint` ✅ (same 2 baseline hook warnings in `App.tsx`)
+  - `npm --prefix .\frontend run build` ✅

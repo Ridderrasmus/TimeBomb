@@ -20,6 +20,21 @@
 - **API findings:** LobbyStateDto, RevealedWire, PlayerPrivateStateDto, WireColor enum all verified complete
 - **Recommendation:** Phase 1 use frontend effect mapping (no backend change). Revisit Phase 2 if complexity grows.
 
+## 2026-02-22: Standard-vs-Evolution Special-Effect Bug Fix
+**Status:** ✅ Implementation approved
+
+**Deliverable:** Fixed red forced-target effect leakage into Standard variant; locked behavior with regression tests
+
+**Key Outcomes:**
+- Red forced-target effect logic now strictly Evolution-only via explicit guard in `ApplyRedEffect`
+- Standard variant exits before color effects are applied; no effect text or forced-target metadata
+- Evolution variant preserves full red forced-target behavior with metadata chain intact
+- Added regression test `RevealWire_DoesNotApplyRedForcedTargetEffect_InStandardVariant` (Standard path)
+- Added regression test `RevealWire_AppliesRedForcedTargetEffect_InEvolutionVariant` (Evolution path)
+- All 13 backend tests passing; no breaking changes
+- User directive enforced: non-Evolution games have zero special color effects
+- Ripley approved; variant compliance now automated in CI
+
 ## 2026-02-22T18:30:00Z: Backend Touchpoint Analysis for Richer Frontend UI
 **Status:** Complete. Ready for implementation.
 
@@ -86,3 +101,9 @@ All 12 core API/hub touchpoints verified ready. No breaking changes needed.
 - `GameRuntimeDto` now includes `forcedTargetPlayerNameForNextTurn` and `recentEffectCue` (round/turn/effect plus related player metadata).
 - `RevealedWire` now carries optional forced-target metadata, and `RevealWire` responses now return the updated revealed wire so cue/effect fields are available immediately to hub listeners.
 - Validation: `dotnet build .\TimeBomb.sln -nologo` succeeds after these backend changes.
+
+## 2026-02-22: Standard variant special-effect guard
+- Fixed a rules bug where Standard games still applied the red forced-target color effect.
+- Standard variant now exits color-effect handling without red side-effects; Evolution behavior is unchanged.
+- Added regression coverage to verify Standard red reveals produce no forced-target metadata/effect, while Evolution red reveals still do.
+- Validation: `dotnet build .\TimeBomb.sln -nologo` and `dotnet test .\TimeBomb.sln -nologo` passed (13 tests).

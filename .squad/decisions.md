@@ -427,3 +427,68 @@ Ripley:
 - **Parker:** Document source-of-truth expectations between structured cue metadata and free-form `Effect` text
 
 **Phase 2 Ready:** All agents cleared; Phase 2 tasks H2.1–H2.3 + B2.1–B2.6 scheduled for launch
+
+---
+
+## 2026-02-22: Phase 2 + Bugfix Batch — Implementation Complete and Approved
+
+### 2026-02-22T19:12:55Z: Hicks — Phase 2 Decision UX Implementation Complete
+**By:** Hicks (Frontend UI Developer)
+**What:** Implemented pending-decision modal UX with two-step interaction and effect cue visibility enhancement.
+**Decisions:**
+1. Pending decisions use modal-style UI with explicit select-color + confirm-CTA flow to prevent accidental instant resolves
+2. Effect cue rendering prioritizes `game.recentEffectCue` with fallback to latest revealed wire `effect` field
+3. Forced-target label uses backend `forcedTargetPlayerNameForNextTurn` with ID/name fallback for compatibility
+**Why:** Improves decision confidence and readability under turn pressure; uses additive backend metadata as source-of-truth.
+**Impact:** Frontend remains contract-compatible; Phase 2 UX slice production-ready.
+
+---
+
+### 2026-02-22T19:12:55Z: Parker — Standard-vs-Evolution Special-Effect Bug Fix
+**By:** Parker (Backend Specialist)
+**What:** Fixed standard-variant special-effect bug where red forced-target effect was incorrectly applied to non-Evolution games.
+**Decision:** Red forced-target effect logic now strictly Evolution-only via explicit guard in `ApplyRedEffect`; no effect text or forced-target metadata in Standard variant.
+**Why:** Enforce user directive that non-Evolution games must have zero special color effects.
+**Implementation:**
+- Updated `TimeBombGame.EvaluateRevealAndPrepareDecision` to exit before color effects in Standard path
+- Added regression test `RevealWire_DoesNotApplyRedForcedTargetEffect_InStandardVariant`
+- Preserved full Evolution behavior with complete metadata chain
+**Impact:** No breaking changes; backward-compatible; variant compliance now automated in CI.
+
+---
+
+### 2026-02-22T19:12:55Z: Bishop — Standard-vs-Evolution Regression Test Lock
+**By:** Bishop (QA Specialist)
+**What:** Implemented deterministic regression tests to lock standard-vs-evolution variant behavior.
+**Tests Added:**
+1. `RevealWire_DoesNotApplyRedForcedTargetEffect_InStandardVariant` — Confirms no effect metadata in Standard
+2. `RevealWire_AppliesRedForcedTargetEffect_InEvolutionVariant` — Confirms red forced-target behavior in Evolution
+**Why:** Prevent future regressions; enforce automated compliance in test suite.
+**Result:** All 13 tests passing; variant behavior locked.
+
+---
+
+### 2026-02-22T19:12:55Z: Ripley — Phase 2 + Bugfix Batch Review (APPROVED)
+**By:** Ripley (Lead Coordinator)
+**Review Scope:**
+- Frontend Phase 2: `App.tsx` pending-decision modal, effect cue rendering
+- Backend bugfix: `TimeBombGame` red-effect Evolution guard
+- QA regression: Standard-vs-Evolution deterministic test pairs
+**Validation:**
+- `dotnet build .\TimeBomb.sln -nologo` ✅
+- `dotnet test .\TimeBomb.sln -nologo` ✅ (13 passed, 0 failed)
+- `npm --prefix .\frontend run build` ✅
+- `npm --prefix .\frontend run lint` ✅ (2 baseline warnings unchanged)
+**Findings:**
+1. Standard bugfix correct: Red forced-target strictly Evolution-only
+2. Evolution behavior preserved: Full metadata chain intact
+3. Phase 2 UI coherent: Decision flow + cues non-breaking, contract-compatible
+4. Regression tests locked: Variant compliance automated
+**Non-Blocking Observations:**
+- `recentEffectCue` mapped but not yet consumed by frontend (drift risk; Phase 3 opportunity)
+- Forced-target fallback chain resilient but could benefit from mapper tests
+**Verdict:** ✅ **APPROVED** — Phase 2 production-ready; directive enforced
+**Next Recommendations:**
+- Add mapper/contract tests for `recentEffectCue` projection
+- Add UI integration tests for pending-decision confirm flow
+- Consider Evolution scenario: red forced-target chained across multiple turns

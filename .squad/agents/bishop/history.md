@@ -48,3 +48,24 @@
 - Added `TimeBomb.Server.Tests` and wired it into `TimeBomb.sln` with a project reference to `TimeBomb.Server`.
 - Added 11 deterministic `TimeBombGame` tests covering player-count validation, selected-color validation, turn-limit behavior (including Evolution orange reduction), round preparation readiness flow, and pending-decision selected-color rejection.
 - Verified `dotnet test .\TimeBomb.sln -nologo` passes with 11/11 tests succeeding.
+
+## 2026-02-22: Standard vs Evolution red-effect regressions locked
+- Added deterministic regression coverage for red-wire special-effect gating in `TimeBomb.Server.Tests\UnitTest1.cs`.
+- Standard regression now fixes expected behavior: revealing a red bomb in `GameVariant.Standard` leaves `Effect`, revealed forced-target metadata, and `ForcedTargetPlayerIdForNextTurn` unset.
+- Evolution regression keeps special-effect behavior guarded by assertion: red reveal in `GameVariant.Evolution` assigns the expected forced target and effect text in a single-candidate deterministic setup.
+- Verified `dotnet test .\TimeBomb.sln -nologo` passes with 11/11 tests succeeding.
+
+## 2026-02-22: Standard-vs-Evolution Regression Test Lock
+**Status:** ✅ Implementation approved
+
+**Deliverable:** Deterministic regression tests locking standard-vs-evolution variant behavior
+
+**Key Outcomes:**
+- Implemented `RevealWire_DoesNotApplyRedForcedTargetEffect_InStandardVariant` test
+- Implemented `RevealWire_AppliesRedForcedTargetEffect_InEvolutionVariant` test
+- Evolution test uses single-player forced-target constraint for deterministic assertions
+- All 13 backend tests passing (11 previous + 2 new)
+- Variant behavior locked; prevents future regressions
+- Standard variant: No special color effects confirmed ✅
+- Evolution variant: Red forced-target behavior preserved ✅
+- Ripley approved; variant compliance automated
