@@ -1,0 +1,18 @@
+<Project Sdk="Aspire.AppHost.Sdk/13.3.0-preview.1.26121.1">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UserSecretsId>dfdb4900-e09c-4d3c-a52f-4aff605e9083</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TimeBomb.Server\TimeBomb.Server.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.JavaScript" Version="13.3.0-preview.1.26121.1" />
+  </ItemGroup>
+</Project>

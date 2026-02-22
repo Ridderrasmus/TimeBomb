@@ -1,0 +1,12 @@
+{
+  "version": "1.0",
+  "assignments": [
+    {
+      "assignment_id": "assignment-20260222t170457z",
+      "created_at": "2026-02-22T17:04:57.591Z",
+      "universe": "Alien",
+      "members": ["Ripley", "Hicks", "Parker", "Bishop", "Scribe", "Ralph"],
+      "notes": "Initial Squad assignment for Time Bomb Evolution gameplay UI and logic development"
+    }
+  ]
+}
