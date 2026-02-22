@@ -80,3 +80,9 @@ All 12 core API/hub touchpoints verified ready. No breaking changes needed.
 - Defer effectMessage until Phase 2 QA identifies need
 
 ✅ **No backend changes required for Phase 1–2 UI work**
+
+## 2026-02-22: Phase 1 Backend Support Cues (Implemented)
+- Added additive, optional cue metadata to keep existing REST/SignalR contracts backward-compatible.
+- `GameRuntimeDto` now includes `forcedTargetPlayerNameForNextTurn` and `recentEffectCue` (round/turn/effect plus related player metadata).
+- `RevealedWire` now carries optional forced-target metadata, and `RevealWire` responses now return the updated revealed wire so cue/effect fields are available immediately to hub listeners.
+- Validation: `dotnet build .\TimeBomb.sln -nologo` succeeds after these backend changes.

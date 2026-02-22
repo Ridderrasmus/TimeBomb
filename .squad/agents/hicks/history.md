@@ -47,3 +47,14 @@
 - **Zero backend breaking changes.** Parker confirms API contracts ready (LobbyStateDto, SignalR hub methods, RevealedWire effect field all present)
 - Dependencies: H1.1 gates all Phase 1 component work; Phase 1 integration gates Phase 2; responsive layout must stabilize before animation refactor (Phase 3)
 - Risk: H1.1 design complexity → Ripley decision Day 1 → defer complex animations if timeline blocked
+
+## 2026-02-22: Phase 1 Gameplay UI Polish — Execution Slice 1
+- Implemented reusable in-match UI components in `frontend/src/components`:
+  - `TurnStateProminence` for high-visibility round/turn/active-player state
+  - `PlayerStatusCards` with clearer active and forced-target cues
+  - `RevealedWireHistory` for structured revealed-wire timeline presentation
+- Integrated all three components into `frontend/src/App.tsx` while preserving existing game rules, REST calls, and SignalR flow.
+- Added CSS polish in `frontend/src/App.css` for hierarchy, spacing, subtle animations/transitions, and mobile-safe behavior.
+- Validation completed:
+  - `npm --prefix .\frontend run build` ✅
+  - `npm --prefix .\frontend run lint` ✅ (baseline 2 hook warnings in `App.tsx`, unchanged)

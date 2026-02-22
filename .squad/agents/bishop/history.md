@@ -43,3 +43,8 @@
 - Blocker risks (6): Test framework setup, Aspire harness, Evolution rules ambiguity (Parker 1-hr session Week 1), random seed determinism (use TimeBombGameOptions.RandomSeed), multi-browser automation (Playwright GitHub Actions), screen reader availability (axe + manual NVDA/VoiceOver)
 - Gate rollback rules: Phase 1 (≥2 failures → extend 2 weeks), Phase 2 (>1 edge case fail → Parker review), Phase 3 (Lighthouse <85 or A11y >3 fails → hold deployment)
 - **Success Metrics:** All 13 tasks on schedule, ≥80% backend coverage, WCAG AA pass, zero new bugs, all 4 gates approved
+
+## 2026-02-22: Initial deterministic backend baseline implemented
+- Added `TimeBomb.Server.Tests` and wired it into `TimeBomb.sln` with a project reference to `TimeBomb.Server`.
+- Added 11 deterministic `TimeBombGame` tests covering player-count validation, selected-color validation, turn-limit behavior (including Evolution orange reduction), round preparation readiness flow, and pending-decision selected-color rejection.
+- Verified `dotnet test .\TimeBomb.sln -nologo` passes with 11/11 tests succeeding.
