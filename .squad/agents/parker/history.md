@@ -19,3 +19,64 @@
 - **No breaking changes** required for Phase 1 or Phase 2 (zero backend risk)
 - **API findings:** LobbyStateDto, RevealedWire, PlayerPrivateStateDto, WireColor enum all verified complete
 - **Recommendation:** Phase 1 use frontend effect mapping (no backend change). Revisit Phase 2 if complexity grows.
+
+## 2026-02-22T18:30:00Z: Backend Touchpoint Analysis for Richer Frontend UI
+**Status:** Complete. Ready for implementation.
+
+### Architecture Summary
+**REST API (Lobby Management):**
+- Stateless operations: CreateLobby, JoinLobby, LeaveLobby, UpdateRules, StartGame, DeleteLobby
+- All lobby CRUD endpoints return full LobbyResponse with player list
+- GET /api/lobby/{code} provides current state snapshot
+
+**SignalR Hub (Real-Time Game Events):**
+- Game hub at /hubs/game; players join group HubGroups.Lobby(code)
+- 5 core hub methods: JoinLobbyChannel, RequestPrivateState, RequestLobbyState, StartGame, RevealWire, ResolvePendingDecision, MarkRoundReady
+- 4 client event types: LobbyStateUpdated (full state), WireRevealed (wire + metadata), WireResolved (same), LobbyDeleted
+
+**Data Contracts (Immutable):**
+- LobbyStateDto: Wraps all game state (rules, players, game runtime, outcome)
+- GameRuntimeDto: Round, turn, activePlayer, forced target, bomb/defuse counts, pending decision, wire history
+- RevealedWire: Round, turn, activePlayerId, revealedFromPlayerId, card, optional defusedColorAssigned/reactivatedColor/effect
+- PlayerPrivateStateDto: Team, round prep flag, ready flag, visible hand
+- PendingDecisionDto: Type (AssignDefuseColor | ReactivateBlueColor), requestedByPlayerId, availableColors
+
+### Required Backend Tasks (Phase 1–2)
+All 12 core API/hub touchpoints verified ready. No breaking changes needed.
+
+**API Contracts:**
+1. LobbyStateDto fully populated with wire reveal data, effect strings, and game state
+2. RevealedWire.effect field optional; frontend handles null gracefully
+3. PlayerPrivateStateDto.visibleHand shows only safe cards for active player
+4. PendingDecisionDto.availableColors narrowed by game rules (e.g., only undefused/reactivatable colors)
+
+**Hub Event Contracts:**
+- WireRevealed: Single RevealedWire object (card, effects, prior metadata)
+- WireResolved: Single RevealedWire object with decision result (defusedColorAssigned or reactivatedColor)
+- LobbyStateUpdated: Full GameRuntimeDto snapshot (always sent after action to sync state)
+
+### Optional Backend Tasks (Phase 2–3)
+1. **Effect message flavor text**: Add optional `RevealedWire.effectMessage` string for narrative callouts (e.g., "Blue wire reactivated Orange!"). Backend composes from effect enum. Defer unless Phase 2 testing requires complexity.
+2. **Animation sequence hints**: Add optional `RevealedWire.animationSequence` array to guide frontend card animations (flip, shuffle, highlight timing). Defer to Phase 3 polish.
+3. **Player statistics endpoint**: POST /api/lobby/{code}/stats to track per-player metrics (cards revealed, decisions made). Defer if not in UI roadmap.
+
+### High-Risk Validation Concerns for Bishop (QA)
+1. **Decision race condition**: Two clients resolve same pending decision simultaneously; backend must reject second with HubException
+2. **Forced target bypass**: Backend validates red wire target match; frontend UI must also disable alternate targets
+3. **Empty hand check**: Backend validates targetPlayer.HasCards; frontend must prevent reveals on zero-card players
+4. **Round prep hang**: All players must mark ready before game advances; test with 2/3/4 player counts
+5. **Outcome integrity**: Winner and Reason must both be set when game completes; test bomb/defuse/round-limit wins
+
+### Integration Checklist for Hicks (Frontend)
+✅ **Phase 1 Components Ready:**
+- WireCard: Use RevealedWire.card.kind and RevealedWire.card.color
+- Turn Banner: Use activePlayerId, round, turnsTakenInRound, roundTurnLimit
+- Player Status Cards: Use players[].remainingWireCount and isActiveTurnPlayer
+- Wire History Panel: Use revealedWires[] array; no backend sorting needed
+- Private Hand: Call RequestPrivateState after join; cache until state refresh
+
+✅ **Phase 2 Components (Defer effect flavor to optional):**
+- Pending Decision Modal: Use pendingDecision.type and availableColors
+- Defer effectMessage until Phase 2 QA identifies need
+
+✅ **No backend changes required for Phase 1–2 UI work**

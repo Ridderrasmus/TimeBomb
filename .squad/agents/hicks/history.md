@@ -8,6 +8,14 @@
 
 ## Learnings
 - Initial charter and context seeded during squad bootstrap.
+- **2026-02-22: UI Backlog Mapping Completed**
+  - Analyzed monolithic App.tsx (972 lines) and identified 5 key gaps: no reusable components, no animation framework, no accessibility structure, brittle responsive layout, no effect toast system
+  - Mapped current architecture: React hooks state management, inline interfaces, SignalR real-time updates, CSS variable theming
+  - Decomposed Phase 1–3 roadmap into 14 concrete tasks with exact file targets, component responsibilities, UX behaviors, and acceptance criteria
+  - Identified zero backend breaking changes required; Parker only needs to confirm SignalR flow reliability
+  - Established dependencies: p1-wireframe gates all Phase 1 component development; p1-integration gates Phase 2; responsive redesign required before animation refactor (layout must stabilize first)
+  - Key decision: WireCard, WireHistory, PlayerStatusCard as separate modules (not inline); DecisionModal as overlay (not inline dialog); EffectToast as queue-managed component (not individual notifications)
+  - Tool: Created SQL backlog tracker (ui_tasks, ui_component_refs, ui_dependencies tables) for cross-phase visibility and dependency querying
 
 ## 2026-02-22: Phase 1–3 Task Assignments (from Ripley briefing)
 **Status:** Ready to start
@@ -23,3 +31,19 @@
 - **Review Gates:** Ripley gates Phase 1 code review before merge (Week 2, Day 3)
 - **Backend dependency:** Parker API review (no code changes expected)
 - **File structure:** Organize components by Phase (Phase1/, Phase2/, Phase3/ subdirs)
+
+## 2026-02-22: Implementation-Ready Backlog Finalized
+**Status:** Ready for Day 1 execution
+
+**Deliverable:** `orchestration-log/20260222-182608-hicks.md` + merged to decisions.md
+
+**Key Outcomes:**
+- 14-task frontend backlog fully detailed with acceptance criteria, target files, UX behaviors, and backend dependencies
+- Phase 1 (Weeks 1–2): 6 tasks (wireframes → 5 components → integration); gates wireframes approval (Day 1), code review (Week 2 Day 3)
+- Phase 2 (Weeks 2–3): 3 tasks (decision modal, toasts, color picker) parallel with QA edge case testing
+- Phase 3 (Weeks 3–4): 5 tasks (responsive, animation suite, theme, a11y, regression doc)
+- **Critical Path:** H1.1 wireframe gate (Day 1) → H1.2–H1.5 parallel (Days 2–8) → H1.6 integration (Day 10 gate)
+- Technical decisions locked: React hooks, CSS Modules, GPU acceleration, useAnimationFrame hook, 3-tier responsive (1920, 768, 375), semantic HTML + aria-labels
+- **Zero backend breaking changes.** Parker confirms API contracts ready (LobbyStateDto, SignalR hub methods, RevealedWire effect field all present)
+- Dependencies: H1.1 gates all Phase 1 component work; Phase 1 integration gates Phase 2; responsive layout must stabilize before animation refactor (Phase 3)
+- Risk: H1.1 design complexity → Ripley decision Day 1 → defer complex animations if timeline blocked

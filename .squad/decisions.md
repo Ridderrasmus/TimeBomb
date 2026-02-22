@@ -83,3 +83,254 @@
 - Phase 3: Full accessibility audit (screen reader, keyboard nav, WCAG AA) + regression test on 4 platforms (Chrome, Firefox, Safari, Edge)
 
 **Why:** QA gates code review. Fixtures ready before Hicks pushes Phase 1.
+
+---
+
+## 2026-02-22: Squad Execution Launch — Implementation-Ready Backlog Finalized
+
+### 2026-02-22T18:26:08Z: Hicks — UI Implementation Backlog Approved
+**By:** Hicks (Frontend UI Dev)
+**What:** 14-task implementation-ready frontend roadmap across 3 phases:
+- **Phase 1 (Weeks 1–2):** 6 tasks (wireframes → WireCard, WireHistory, PlayerStatusCard, TurnBanner → integration)
+- **Phase 2 (Weeks 2–3):** 3 tasks (decision modal, effect toasts, color picker)
+- **Phase 3 (Weeks 3–4):** 5 tasks (responsive redesign, animation suite, dark/light theme, a11y audit, regression doc)
+
+**Technical Stack:**
+- React 19 + TypeScript + Vite (existing monolithic App.tsx)
+- CSS Modules + GPU acceleration (transform + opacity only)
+- 3-tier responsive: 1920×1080 desktop, 768×1024 tablet, 375×667 mobile
+- useAnimationFrame hook + @keyframes for 60fps consistency
+- Semantic HTML + aria-labels (accessibility-first)
+
+**Key Decisions:**
+- Keep monolithic App.tsx; add reusable components (WireCard.tsx, etc.)
+- No Redux (React hooks sufficient)
+- CSS Grid subgrid for responsive layouts (Phase 3)
+- Defer theme switcher UI to post-Phase 3
+
+**Success Criteria:** All 14 tasks on schedule, 60fps animations (Lighthouse ≥90), responsive 3-viewport + 4-browser (Chrome, Firefox, Safari, Edge), WCAG 2.1 AA compliance, zero new bugs vs baseline.
+
+**Backend Dependencies:** None for Phase 1–2; optional effectMessage field on RevealedWire for Phase 2 flavor text (defer unless Phase 2 QA testing requires).
+
+**Review Gates:**
+- Phase 1 Fixture (Day 10): Wireframes approved, components render, fixtures documented
+- Phase 1 Code (Week 2 Day 3): Components integrate, responsive confirmed, 60fps verified
+- Phase 2 Edge Cases (Week 3 Day 2): Modal/toasts/picker integrate, edge cases pass
+- Phase 3 Completion (Week 4 Day 4): All Polish complete, WCAG AA pass, 4-browser regression pass
+
+---
+
+### 2026-02-22T18:26:08Z: Parker — Backend Contracts Finalized (Zero Changes)
+**By:** Parker (Backend Specialist)
+**What:** Comprehensive API audit + QA risk matrix. All backend contracts production-ready for Phase 1–2 frontend work.
+
+**REST Endpoints Verified (5 core):**
+- ✅ `POST /api/lobby` — CreateLobby
+- ✅ `GET /api/lobby/{code}` — GetByCode
+- ✅ `POST /api/lobby/{code}/join` — JoinLobby (broadcasts LobbyStateUpdated)
+- ✅ `PUT /api/lobby/{code}/rules` — UpdateRules
+- ✅ `POST /api/lobby/{code}/start` — StartGame
+
+**SignalR Hub Methods Verified (6 core):**
+- ✅ `JoinLobbyChannel` — Subscribe to lobby updates
+- ✅ `RequestPrivateState` — Fetch player hand + prep state
+- ✅ `RevealWire` — Execute turn (broadcasts WireRevealed → LobbyStateUpdated)
+- ✅ `ResolvePendingDecision` — Submit modal choice (broadcasts WireResolved → LobbyStateUpdated)
+- ✅ `MarkRoundReady` — Signal ready for next round
+- ✅ Hub events: LobbyStateUpdated, WireRevealed, WireResolved, LobbyDeleted
+
+**Data Contracts Verified (All Fields Present):**
+- ✅ `LobbyStateDto` — game state + players + rules + outcome
+- ✅ `GameRuntimeDto` — round, turn, activePlayer, forcedTargetPlayerIdForNextTurn, bomb/defuse counts, wire history
+- ✅ `RevealedWire` — round, turn, card, effect (optional), decision results
+- ✅ `PlayerPrivateStateDto` — team, hand, ready flag, prep state
+- ✅ `PendingDecisionDto` — type, requestor, available colors
+
+**Zero Breaking Changes Required:** Hicks frontend development can proceed independently.
+
+**Parker Backend Tasks (3 defensive, non-blocking):**
+- **P1.1:** API contract review & sign-off (EOD Day 1) — Document zero changes; baseline confirmed
+- **P1.2:** SignalR flow validation (EOD Day 3) — Multi-player test, verify event ordering (5–7 LobbyStateUpdated/turn)
+- **P1.3:** Error message audit (EOD Day 7) — Ensure hub exceptions have clear context for frontend error handling
+
+**QA Risk Matrix (For Bishop):**
+5 critical blockers + 6 high-risk concerns documented with mitigations:
+- Decision race condition: Validate second ResolvePendingDecision rejected with HubException
+- Forced target bypass: Validate backend rejects invalid targets
+- Empty hand reveal: Validate targetPlayer.HasCards() check
+- Outcome corruption: Validate Winner + Reason both set on game end
+- Round prep hang: Validate all-ready check before advancing
+- State sync lag: Verify full LobbyStateDto broadcast (no partial updates)
+- Null effect handling: Verify frontend handles RevealedWire.effect=null gracefully
+- Active player invalid: Verify GetActivePlayerId() valid after player leaves
+- Bomb color mismatch: Verify SelectedBombColors matches player count (Evolution)
+- Mobile backlog: Verify frame rate ≥50fps under rapid events
+
+**Optional Enhancements (Phase 2+, defer):**
+- Add `RevealedWire.effectMessage: string?` for flavor text (e.g., "Blue reactivated Orange!") — assess Phase 2 QA need
+- Add animation sequence hints (Phase 3 polish)
+- Add player statistics endpoint (post-Phase 3)
+
+**Success Criteria:** All required endpoints + hub methods + DTOs validated and confirmed production-ready. P1.1–P1.3 tasks on schedule. Bishop QA tests pass without backend blockers.
+
+---
+
+### 2026-02-22T18:26:08Z: Bishop — QA Test Roadmap Finalized (13 Tasks, 4 Gates)
+**By:** Bishop (QA Specialist)
+**What:** 13 implementation-ready QA tasks across 3 phases, covering backend unit tests, SignalR integration, frontend fixtures, E2E flows, edge cases, and accessibility audit.
+
+**Current Test Coverage Gaps (9 Critical/High):**
+| Layer | Gap | Priority |
+|-------|-----|----------|
+| Backend Game Logic | Core loop (RevealWire, outcomes, edge cases) untested | **CRITICAL** |
+| Backend SignalR | Mapper transforms, data sync untested | **HIGH** |
+| Frontend UI | No test framework; rendering/state untested | **HIGH** |
+| Integration (4-player) | Full game flow unvalidated | **CRITICAL** |
+| Evolution Rules (5 effects) | All effects untested; interactions unknown | **HIGH** |
+| Responsive Design | 3 viewports untested | **MEDIUM** |
+| Accessibility | Keyboard nav, screen reader, WCAG AA untested | **MEDIUM** |
+
+**Phase 1 (Weeks 1–2) — 4 Tasks:**
+- **B1.1:** Backend game logic unit tests (EOD Day 2)  
+  Target: TimeBombGame.cs, GameState.cs; ≥80% coverage
+- **B1.2:** Backend SignalR mapper integration tests (EOD Day 5)  
+  Target: LobbyStateMapper.cs, PlayerPrivateStateMapper.cs; ≥90% coverage
+- **B1.3:** Frontend test fixture setup (EOD Day 7)  
+  Target: 5 manual scenarios (basic reveal, bomb, active highlight, forced target, error handling)
+- **B1.4:** Responsive testing (EOD Day 8)  
+  Target: 3 viewports (1920×1080, 768×1024, 375×667); screenshots, no overflow, ≥48px touch targets
+
+**Phase 2 (Weeks 2–3) — 6 Tasks:**
+- **B2.1:** 4-player game full flow E2E (EOD Week 2 Day 3) — Happy path: create, join, ready, 15+ reveals, verify outcome
+- **B2.2:** Blue reactivate sequence (EOD Week 2 Day 5) — Modal appears, color selection resolves, state correct
+- **B2.3:** Green bomb 3-count explosion (EOD Week 3 Day 1) — Reveal 3rd Green → auto-defuse → verify outcome
+- **B2.4:** Pink consecutive-reveal explosion (EOD Week 3 Day 1) — LastRevealedWire tracking; bomb on 2nd consecutive Pink
+- **B2.5:** Red wire forced target (EOD Week 3 Day 2) — Red reveals → badge → next turn forced to target (deterministic seed)
+- **B2.6:** Defuse objective + unassigned wires (EOD Week 3 Day 2) — Clarify rules with Parker; verify win condition
+
+**Phase 3 (Weeks 3–4) — 3 Tasks:**
+- **B3.1:** Evolution 5-effect E2E (EOD Week 3 Day 2) — All effects: Green 3, Orange R4, Pink consecutive, Blue reactivate, Red forced target
+- **B3.2:** Accessibility audit WCAG AA (EOD Week 3 Day 5) — Keyboard nav, focus (≥2px, ≥4.5:1 contrast), semantic HTML, screen reader, prefers-reduced-motion
+- **B3.3:** Regression on 4 browsers (EOD Week 4 Day 4) — Chrome, Firefox, Safari, Edge; full game flow, no visual glitches
+
+**Review Gate Criteria:**
+- **Gate 1 (Day 10):** B1.1–B1.4 all passing; ≥80% backend coverage; 5 fixtures documented; 3 viewports stable
+- **Gate 2 (Week 2 Day 3):** H1.2–H1.6 components render; responsive confirmed; 60fps verified; no regressions
+- **Gate 3 (Week 3 Day 2):** B2.1–B2.6 all edge cases pass; no new bugs; H2.1–H2.3 integrate
+- **Gate 4 (Week 4 Day 4):** B3.1–B3.3 complete; WCAG AA pass; Lighthouse ≥90 desktop ≥80 mobile; ready for production
+
+**Blocker Risks & Mitigations (6 Key):**
+1. No test framework (Jest/Vitest) → Day 1 setup; fallback Playwright E2E
+2. Test harness (Aspire multi-player) → Pre-stage 4-player Aspire; document setup
+3. Evolution rules ambiguity → Week 1 Parker 1-hour session for clarification
+4. Random seed non-determinism → Use `TimeBombGameOptions.RandomSeed` in tests
+5. Multi-browser testing → Set up Playwright GitHub Actions; auto-test all 4 browsers
+6. Screen reader unavailable → axe DevTools (automated); manual NVDA (Windows) + VoiceOver (macOS)
+
+**Acceptance Criteria Matrices:** Documented for 6 feature areas (game state viz, decision flow, forced target, responsive, accessibility).
+
+**Success Criteria:** All 13 tasks on schedule, ≥80% backend coverage, ≥90% mapper coverage, WCAG AA pass, zero new bugs, all 4 gates approved, Ripley sign-off.
+
+---
+
+### 2026-02-22T18:26:08Z: Ripley — Unified Implementation-Ready Execution Backlog
+**By:** Ripley (Lead Coordinator)
+**What:** Consolidated 14-task execution backlog synthesizing Hicks (6 frontend Phase 1, 3 Phase 2, 5 Phase 3), Parker (3 backend Phase 1), and Bishop (4 QA Phase 1, 6 Phase 2, 3 Phase 3). Unified timeline (4 weeks), explicit dependencies, risk matrix (7 risks), rollback posture, daily standup template, owner role definitions.
+
+**14 Total Implementation-Ready Tasks:**
+- **Phase 1 (Weeks 1–2):** 6 Hicks + 3 Parker + 4 Bishop = **13 parallel tasks**
+- **Phase 2 (Weeks 2–3):** 3 Hicks + 0 Parker + 6 Bishop = **9 parallel tasks**
+- **Phase 3 (Weeks 3–4):** 5 Hicks + 0 Parker + 3 Bishop = **8 parallel tasks**
+
+**Phase 1 Critical Path:**
+1. **Day 1 Parallel Launch:** H1.1 (wireframes) + P1.1 (API contract) + B1.1 (backend tests)
+2. **Ripley Gate 1 (Day 1):** Approve H1.1 wireframes → [Approve → H1.2–H1.5 proceed] or [Revise → H1.1 extends]
+3. **Days 2–8:** H1.2–H1.5 components + B1.2–B1.4 tests in parallel
+4. **Day 10 Gate Review:** Criteria: H1.1–H1.5 approved, B1.1–B1.4 ≥80% coverage, P1.1–P1.2 validated
+   → APPROVE → Phase 2 OR REVISE → Phase 1 rework
+
+**4 Mandatory Review Gates:**
+1. **Phase 1 Fixture Approval (EOD Day 10)** — Blocks Hicks component merge
+   - Criteria: Components render, fixtures documented (5 scenarios), responsive stable (3 viewports), ≥80% test coverage
+   - Decision: APPROVE (→ Phase 2) or REVISE (→ Phase 1 extends)
+2. **Phase 1 Code Review (EOD Week 2 Day 3)** — Blocks merge to main
+   - Criteria: No console errors, visual regression <5%, responsive confirmed, 60fps (Lighthouse ≥90)
+   - Decision: APPROVE (→ Phase 2) or REVISE (→ components rework)
+3. **Phase 2 Edge Case Approval (EOD Week 3 Day 2)** — Blocks Phase 2 merge; triggers Phase 3
+   - Criteria: B2.1–B2.6 all edge cases pass, no new bugs, H2.1–H2.3 integrate
+   - Decision: APPROVE (→ Phase 3) or ESCALATE (→ Parker game logic review)
+4. **Phase 3 Completion + A11y + Regression (EOD Week 4 Day 4)** — Blocks deployment
+   - Criteria: All Phase 3 tasks complete, WCAG AA pass, 4-browser regression pass, Lighthouse ≥90 desktop ≥80 mobile
+   - Decision: APPROVE (→ Production) or HOLD (→ Phase 3 rework)
+
+**Risk Controls (7 Key Risks):**
+| Risk | Severity | Control | Rollback |
+|------|----------|---------|----------|
+| H1.1 design infeasible | HIGH | Ripley challenges Day 1; defer complex animations | Simplify to static transitions; Phase 3 backfill |
+| SignalR race condition | HIGH | Bishop B1.2 stress test (10 reveals/sec) | Revert to full-state only; extend Phase 1 by 2 days |
+| Responsive layout thrashing | MEDIUM | Test on actual devices; capture video | Revert to single 760px breakpoint; Phase 3 retry |
+| A11y contrast fails | MEDIUM | Contrast checker before Phase 3 approval | Increase wire color saturation; defer light mode |
+| Animation <60fps | MEDIUM | DevTools profile; check will-change/transform | Simplify to 30fps; Phase 3 retry with optimization |
+| Test harness setup delay | LOW | Pre-stage Aspire with local DNS | Use 4-browser-tab manual simulation |
+| Mobile animation backlog | LOW | Frontend event queue + debounce + 60fps cap | Mobile testing Phase 3; non-blocking |
+
+**Rollback Rules:**
+- **Phase 1 Gate:** If ≥2 criteria fail → roll back to Day 1; extend timeline 2 weeks. **No partial merge.**
+- **Phase 2 Gate:** If edge case >1 failure → Parker investigates game logic; rollback H2 until fixed.
+- **Phase 3 Gate:** If Lighthouse <85 desktop or A11y >3 failures → hold deployment; Phase 3 rework.
+
+**Branch Strategy:**
+- Feature branches: `feature/phase{N}-{task-id}` (e.g., `feature/phase1-h1-2-wirecard`)
+- Code review required before merge to main
+- Each merge includes smoke test (basic 2-player game flow)
+- Performance baseline at Phase 1 merge; Phase 3 must not regress >5%
+
+**Owner Roles & Responsibilities:**
+- **Hicks (Frontend Dev):** Build components, optimize 60fps, collaborate on error messages
+- **Parker (Backend):** Validate contracts, clarify edge cases, support test harness if needed
+- **Bishop (QA):** Execute tests, capture evidence, escalate failures
+- **Ripley (Lead):** Gate decisions (final authority), daily standup sync, blocker resolution within 24h, scope guard
+
+**Daily Standup Template:**
+```
+[Owner]: [Task-ID] — Status
+
+Hicks:
+- H1.X: [Completed / In Progress / Blocked]
+- Blockers: [None / List issues]
+- Next 24h: [Next task]
+
+Parker:
+- P1.X: [Status]
+- Blockers: [None / List issues]
+- Next 24h: [Next task]
+
+Bishop:
+- B1.X: [Status]
+- Blockers: [None / List issues]
+- Next 24h: [Next task]
+
+Ripley:
+- Gate decisions: [Approved / Pending / Revise]
+- Escalations: [If any]
+- Next 24h: [Gate review / blocker resolution]
+```
+
+**Success Metrics (Phase 1–3):**
+✅ All 14 tasks on schedule  
+✅ 60fps animation performance (Lighthouse ≥90)  
+✅ Responsive testing on 3 viewports, 4 browsers  
+✅ WCAG 2.1 AA accessibility compliance  
+✅ Zero new bugs vs baseline  
+✅ Ripley approval at all 4 gates  
+
+**Dependencies Met:**
+- ✅ Hicks frontend roadmap (14 components identified, 3-tier responsive)
+- ✅ Parker backend validation (zero changes, API surfaces ready)
+- ✅ Bishop QA roadmap (13 test tasks, 4 gates, acceptance criteria)
+
+**Immediate Next Steps:**
+1. Ripley presents unified backlog to Rasmus (Team Root)
+2. Rasmus greenlight → all tasks approved
+3. Day 1 execution: H1.1, P1.1, B1.1 start in parallel
+4. Ripley monitors daily standups, manages gates, escalates to Rasmus only for scope disputes
