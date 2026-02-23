@@ -6,9 +6,9 @@ import {
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, FormEvent } from "react";
 import "./App.css";
+import { HistoryDrawer } from "./components/HistoryDrawer";
 import { PlayerStatusCards } from "./components/PlayerStatusCards";
 import { RevealedPileTotals } from "./components/RevealedPileTotals";
-import { RevealedWireHistory } from "./components/RevealedWireHistory";
 import { TurnStateProminence } from "./components/TurnStateProminence";
 import { WireVisualCard } from "./components/WireVisualCard";
 
@@ -170,6 +170,7 @@ function App() {
   const [hubReady, setHubReady] = useState(false);
   const [selectedPendingDecisionColor, setSelectedPendingDecisionColor] =
     useState<WireColor | null>(null);
+  const [isHistoryDrawerOpen, setIsHistoryDrawerOpen] = useState(false);
   const hubRef = useRef<HubConnection | null>(null);
 
   const activeLobby = liveLobby;
@@ -1062,11 +1063,6 @@ function App() {
                   </section>
                 </div>
               )}
-
-              <RevealedWireHistory
-                wires={activeGame.revealedWires}
-                players={displayedPlayers}
-              />
             </section>
           )}
 
@@ -1085,6 +1081,27 @@ function App() {
             </p>
           )}
         </main>
+
+        {activeGame && (
+          <>
+            <button
+              type="button"
+              className="history-drawer-toggle"
+              onClick={() => setIsHistoryDrawerOpen(true)}
+              aria-label="Open wire history"
+              title="View wire history"
+            >
+              📜
+            </button>
+
+            <HistoryDrawer
+              isOpen={isHistoryDrawerOpen}
+              onClose={() => setIsHistoryDrawerOpen(false)}
+              wires={activeGame.revealedWires}
+              players={displayedPlayers}
+            />
+          </>
+        )}
       </div>
     );
   }
