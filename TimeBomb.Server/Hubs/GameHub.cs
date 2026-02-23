@@ -128,4 +128,21 @@ public class GameHub : Hub
 
 		await Clients.Group(HubGroups.Lobby(lobbyCode)).SendAsync("LobbyStateUpdated", LobbyStateMapper.ToDto(updatedLobby!));
 	}
+
+	public async Task RestartGame(string lobbyCode, string playerId)
+	{
+		var success = _lobbyStore.TryRestartGame(
+			lobbyCode,
+			playerId,
+			out var updatedLobby,
+			out var error);
+
+		if (!success)
+		{
+			throw new HubException(error ?? "Unable to restart game.");
+		}
+
+		await Clients.Group(HubGroups.Lobby(lobbyCode)).SendAsync("GameRestarted", LobbyStateMapper.ToDto(updatedLobby!));
+		await Clients.Group(HubGroups.Lobby(lobbyCode)).SendAsync("LobbyStateUpdated", LobbyStateMapper.ToDto(updatedLobby!));
+	}
 }

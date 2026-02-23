@@ -83,6 +83,13 @@
 - Validation: `npm --prefix .\frontend run lint` ✅ (2 baseline warnings only) and `npm --prefix .\frontend run build` ✅
 - Ripley approved; Phase 3 production-ready
 
+- **2026-02-23: Table Layout Reorganization (#1)**
+  - Reorganized App.tsx and App.css to make the game table the primary visual focus
+  - Moved table to center of screen with adjusted player status card positioning
+  - Improved visual hierarchy through CSS refinements
+  - Changes committed to branch `squad/1-table-layout` and PR #6 opened as draft for testing
+  - Learning: Structural layout changes benefit from draft PR workflow to enable testing before merge
+
 ## Next-Phase Direction (From Ripley Vision)
 1. **Table-center reveal lane** animating cut cards into history/pile totals (reduced-motion fallback)
 2. **Player-attributed pile chips** for quick "who-cut-most" signal

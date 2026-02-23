@@ -379,6 +379,110 @@ public class TimeBombGameTests
         }
     }
 
+    [Fact]
+    public void TryRestartGame_SuccessfullyRestarts_WhenGameIsCompleted()
+    {
+        var store = new LobbyStore();
+        var lobby = store.Create("Test Lobby", "Host");
+        store.TryJoin(lobby.LobbyCode, "Player 2", null, out _, out _);
+        store.TryJoin(lobby.LobbyCode, "Player 3", null, out _, out _);
+        store.TryJoin(lobby.LobbyCode, "Player 4", null, out _, out _);
+        store.TryStart(lobby.LobbyCode, lobby.CreatedByPlayerId, out var startedLobby, out _);
+        
+        var previousGameId = startedLobby!.ActiveGame!.Id;
+        var success = store.TryRestartGame(lobby.LobbyCode, lobby.CreatedByPlayerId, out var restartedLobby, out var error);
+
+        Assert.True(success);
+        Assert.Null(error);
+        Assert.NotNull(restartedLobby);
+        Assert.Equal(GameState.InProgress, restartedLobby!.CurrentState);
+        Assert.NotNull(restartedLobby.ActiveGame);
+        Assert.NotEqual(previousGameId, restartedLobby.ActiveGame!.Id);
+        Assert.Equal(4, restartedLobby.Players.Count);
+    }
+
+    [Fact]
+    public void TryRestartGame_PreservesPlayers_AfterRestart()
+    {
+        var store = new LobbyStore();
+        var lobby = store.Create("Test Lobby", "Host");
+        store.TryJoin(lobby.LobbyCode, "Player 2", null, out _, out _);
+        store.TryJoin(lobby.LobbyCode, "Player 3", null, out _, out _);
+        store.TryJoin(lobby.LobbyCode, "Player 4", null, out _, out _);
+        store.TryStart(lobby.LobbyCode, lobby.CreatedByPlayerId, out var startedLobby, out _);
+
+        var originalPlayerIds = startedLobby!.Players.Select(p => p.Id).ToHashSet();
+        var originalPlayerNames = startedLobby.Players.Select(p => p.Name).ToHashSet();
+        var success = store.TryRestartGame(lobby.LobbyCode, lobby.CreatedByPlayerId, out var restartedLobby, out _);
+
+        Assert.True(success);
+        Assert.Equal(originalPlayerIds, restartedLobby!.Players.Select(p => p.Id).ToHashSet());
+        Assert.Equal(originalPlayerNames, restartedLobby.Players.Select(p => p.Name).ToHashSet());
+    }
+
+    [Fact]
+    public void TryRestartGame_Fails_WhenNotCreator()
+    {
+        var store = new LobbyStore();
+        var lobby = store.Create("Test Lobby", "Host");
+        store.TryJoin(lobby.LobbyCode, "Player 2", "other-player-id", out _, out _);
+        store.TryJoin(lobby.LobbyCode, "Player 3", null, out _, out _);
+        store.TryJoin(lobby.LobbyCode, "Player 4", null, out _, out _);
+        store.TryStart(lobby.LobbyCode, lobby.CreatedByPlayerId, out _, out _);
+
+        var success = store.TryRestartGame(lobby.LobbyCode, "other-player-id", out var restartedLobby, out var error);
+
+        Assert.False(success);
+        Assert.Null(restartedLobby);
+        Assert.Equal("Only the lobby creator can restart the game.", error);
+    }
+
+    [Fact]
+    public void TryRestartGame_Fails_WhenLobbyNotFound()
+    {
+        var store = new LobbyStore();
+        var success = store.TryRestartGame("INVALID", "player-id", out var restartedLobby, out var error);
+
+        Assert.False(success);
+        Assert.Null(restartedLobby);
+        Assert.Equal("Lobby not found.", error);
+    }
+
+    [Fact]
+    public void TryRestartGame_Fails_WhenGameNotStarted()
+    {
+        var store = new LobbyStore();
+        var lobby = store.Create("Test Lobby", "Host");
+        store.TryJoin(lobby.LobbyCode, "Player 2", null, out _, out _);
+        store.TryJoin(lobby.LobbyCode, "Player 3", null, out _, out _);
+        store.TryJoin(lobby.LobbyCode, "Player 4", null, out _, out _);
+
+        var success = store.TryRestartGame(lobby.LobbyCode, lobby.CreatedByPlayerId, out var restartedLobby, out var error);
+
+        Assert.False(success);
+        Assert.Null(restartedLobby);
+        Assert.Equal("Cannot restart a game that hasn't been started yet.", error);
+    }
+
+    [Fact]
+    public void TryRestartGame_ResetsGameState_WithNewRound()
+    {
+        var store = new LobbyStore();
+        var lobby = store.Create("Test Lobby", "Host");
+        store.TryJoin(lobby.LobbyCode, "Player 2", null, out _, out _);
+        store.TryJoin(lobby.LobbyCode, "Player 3", null, out _, out _);
+        store.TryJoin(lobby.LobbyCode, "Player 4", null, out _, out _);
+        store.TryStart(lobby.LobbyCode, lobby.CreatedByPlayerId, out _, out _);
+
+        var success = store.TryRestartGame(lobby.LobbyCode, lobby.CreatedByPlayerId, out var restartedLobby, out _);
+
+        Assert.True(success);
+        Assert.Equal(1, restartedLobby!.ActiveGame!.CurrentRound);
+        Assert.Equal(0, restartedLobby.ActiveGame.TurnsTakenInRound);
+        Assert.Equal(0, restartedLobby.ActiveGame.RevealedWires.Count);
+        Assert.False(restartedLobby.ActiveGame.Outcome.IsComplete);
+    }
+
     private static TimeBombGame CreateGame(GameVariant variant, int playerCount = 4)
     {
         var options = new TimeBombGameOptions

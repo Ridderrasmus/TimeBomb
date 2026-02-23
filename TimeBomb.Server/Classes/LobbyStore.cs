@@ -411,6 +411,63 @@ public class LobbyStore
         }
     }
 
+    public bool TryRestartGame(
+        string lobbyCode,
+        string requesterPlayerId,
+        out GameLobby? updatedLobby,
+        out string? error)
+    {
+        lock (_gate)
+        {
+            updatedLobby = null;
+            error = null;
+
+            if (!_lobbiesByCode.TryGetValue(lobbyCode, out var lobby))
+            {
+                error = "Lobby not found.";
+                return false;
+            }
+
+            if (lobby.CreatedByPlayerId != requesterPlayerId)
+            {
+                error = "Only the lobby creator can restart the game.";
+                return false;
+            }
+
+            if (lobby.CurrentState == GameState.Lobby)
+            {
+                error = "Cannot restart a game that hasn't been started yet.";
+                return false;
+            }
+
+            if (lobby.Players.Count < MinPlayers || lobby.Players.Count > MaxPlayers)
+            {
+                error = "Lobby must have 4 to 6 players to restart.";
+                return false;
+            }
+
+            var options = new TimeBombGameOptions
+            {
+                Variant = lobby.Rules.Variant,
+                SelectedBombColors = ResolveSelectedColorsForGameStart(lobby)
+            };
+
+            try
+            {
+                lobby.ActiveGame = new TimeBombGame(lobby.Players, options);
+                lobby.CurrentState = GameState.InProgress;
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+                return false;
+            }
+
+            updatedLobby = CloneLobby(lobby);
+            return true;
+        }
+    }
+
     private static List<WireColor>? ResolveSelectedColorsForGameStart(GameLobby lobby)
     {
         if (lobby.Rules.RandomizeCardColors)
