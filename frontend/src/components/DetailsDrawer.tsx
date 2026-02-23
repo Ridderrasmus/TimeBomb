@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 interface DetailsDrawerProps {
   isOpen: boolean;
@@ -9,6 +9,10 @@ interface DetailsDrawerProps {
   variant: "Standard" | "Evolution";
   randomizeCardColors: boolean;
   selectedBombColors?: string[] | null;
+  isCreator: boolean;
+  gameState: "Lobby" | "InProgress" | "Completed";
+  onRestartGame: () => Promise<void>;
+  busy: boolean;
 }
 
 export function DetailsDrawer({
@@ -20,11 +24,21 @@ export function DetailsDrawer({
   variant,
   randomizeCardColors,
   selectedBombColors,
+  isCreator,
+  gameState,
+  onRestartGame,
+  busy,
 }: DetailsDrawerProps) {
+  const [showRestartConfirm, setShowRestartConfirm] = useState(false);
+
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape" && isOpen) {
-        onClose();
+        if (showRestartConfirm) {
+          setShowRestartConfirm(false);
+        } else {
+          onClose();
+        }
       }
     };
 
@@ -37,11 +51,26 @@ export function DetailsDrawer({
       document.removeEventListener("keydown", handleEscape);
       document.body.style.overflow = "";
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, showRestartConfirm]);
+
+  const handleRestartClick = () => {
+    setShowRestartConfirm(true);
+  };
+
+  const handleConfirmRestart = async () => {
+    setShowRestartConfirm(false);
+    await onRestartGame();
+  };
+
+  const handleCancelRestart = () => {
+    setShowRestartConfirm(false);
+  };
 
   if (!isOpen) {
     return null;
   }
+
+  const canRestart = isCreator && (gameState === "InProgress" || gameState === "Completed");
 
   return (
     <>
@@ -94,8 +123,62 @@ export function DetailsDrawer({
               )}
             </dl>
           </section>
+
+          {canRestart && (
+            <section className="detail-section">
+              <button
+                type="button"
+                className="restart-game-button"
+                onClick={handleRestartClick}
+                disabled={busy}
+                aria-label="Restart game"
+              >
+                🔄 Restart Game
+              </button>
+            </section>
+          )}
         </div>
       </aside>
+
+      {showRestartConfirm && (
+        <div 
+          className="restart-confirm-overlay" 
+          onClick={handleCancelRestart}
+          aria-hidden="true"
+        >
+          <div 
+            className="restart-confirm-dialog" 
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-labelledby="restart-confirm-title"
+            aria-describedby="restart-confirm-description"
+          >
+            <h3 id="restart-confirm-title">Restart Game?</h3>
+            <p id="restart-confirm-description">
+              This will start a fresh game with the same players and rules. 
+              All current game progress will be lost.
+            </p>
+            <div className="restart-confirm-actions">
+              <button
+                type="button"
+                className="restart-confirm-cancel"
+                onClick={handleCancelRestart}
+                disabled={busy}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="restart-confirm-confirm"
+                onClick={handleConfirmRestart}
+                disabled={busy}
+              >
+                {busy ? "Restarting..." : "Restart Game"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

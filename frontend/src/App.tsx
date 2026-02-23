@@ -288,6 +288,13 @@ function App() {
       void refreshPrivateState(state.lobbyCode);
     });
 
+    connection.on("GameRestarted", (state: LobbyStateDto) => {
+      setLiveLobby(state);
+      setError(null);
+      void refreshPrivateState(state.lobbyCode);
+      setSelectedPendingDecisionColor(null);
+    });
+
     connection.on("WireRevealed", () => {});
 
     connection.on("WireResolved", () => {});
@@ -318,6 +325,7 @@ function App() {
       setLiveLobby(null);
       setPrivateState(null);
       connection.off("LobbyStateUpdated");
+      connection.off("GameRestarted");
       connection.off("WireRevealed");
       connection.off("WireResolved");
       void connection.stop();
@@ -500,6 +508,27 @@ function App() {
       await refreshPrivateState(currentLobby.lobbyCode);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to start game.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const restartGame = async () => {
+    if (!currentLobby || !isCreator) {
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+    try {
+      await hubRef.current?.invoke(
+        "RestartGame",
+        currentLobby.lobbyCode,
+        playerId,
+      );
+      await refreshPrivateState(currentLobby.lobbyCode);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to restart game.");
     } finally {
       setBusy(false);
     }
@@ -1126,6 +1155,10 @@ function App() {
               variant={activeLobby.rules.variant}
               randomizeCardColors={activeLobby.rules.randomizeCardColors}
               selectedBombColors={activeLobby.rules.selectedBombColors}
+              isCreator={isCreator}
+              gameState={activeLobby.state}
+              onRestartGame={restartGame}
+              busy={busy}
             />
           </>
         )}

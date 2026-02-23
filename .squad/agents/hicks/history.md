@@ -90,6 +90,19 @@
   - Changes committed to branch `squad/1-table-layout` and PR #6 opened as draft for testing
   - Learning: Structural layout changes benefit from draft PR workflow to enable testing before merge
 
+- **2026-02-23: Details Drawer Implementation (#4)**
+  - Created `DetailsDrawer` component for game metadata (lobby info, creator, rules settings)
+  - Followed consistent drawer pattern from `HistoryDrawer` (#3): overlay + slide-in animation + escape key handling
+  - Positioned toggle button on left (gear icon ⚙️) to complement history drawer on right (scroll icon 📜)
+  - Drawer slides in from left using `detailsDrawerSlideIn` keyframe animation with cubic-bezier easing
+  - Key architecture decision: Both drawers share `.drawer-overlay` backdrop and `.drawer-close-button` styles for consistency
+  - TypeScript null-safety: Updated conditional to `{activeGame && activeLobby && (` to prevent TS18047 errors
+  - CSS organization: Details drawer styles added after history drawer styles for maintainability
+  - Accessibility: Includes reduced-motion fallback, escape key close, `role="dialog"`, `aria-label` attributes
+  - File paths: `frontend/src/components/DetailsDrawer.tsx`, updated `frontend/src/App.tsx` and `frontend/src/App.css`
+  - Validation: Build ✅, Lint ✅ (2 baseline warnings unchanged)
+  - Branch: `squad/4-details-drawer`, Draft PR #9
+
 ## Next-Phase Direction (From Ripley Vision)
 1. **Table-center reveal lane** animating cut cards into history/pile totals (reduced-motion fallback)
 2. **Player-attributed pile chips** for quick "who-cut-most" signal
