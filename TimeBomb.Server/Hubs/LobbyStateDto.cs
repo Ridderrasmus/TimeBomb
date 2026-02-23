@@ -39,18 +39,35 @@ public sealed record GameRuntimeDto(
     IReadOnlyList<WireColor> SelectedBombColors,
     PendingDecisionDto? PendingDecision,
     IReadOnlyList<RevealedWire> RevealedWires,
-    GameOutcome Outcome);
+    GameOutcome Outcome,
+    string? ForcedTargetPlayerNameForNextTurn = null,
+    RecentEffectCueDto? RecentEffectCue = null,
+    IReadOnlyDictionary<string, int>? RevealedPileTotalsByPlayer = null,
+    string? PreviousActivePlayerId = null);
 
 public sealed record PendingDecisionDto(
     PendingDecisionType Type,
     string RequestedByPlayerId,
     IReadOnlyList<WireColor> AvailableColors);
 
+public sealed record RecentEffectCueDto(
+    int Round,
+    int Turn,
+    string Effect,
+    string ActivePlayerId,
+    string RevealedFromPlayerId,
+    string? ForcedTargetPlayerId,
+    string? ForcedTargetPlayerName);
+
 public static class LobbyStateMapper
 {
     public static LobbyStateDto ToDto(GameLobby lobby)
     {
         var game = lobby.ActiveGame;
+        var forcedTargetPlayerNameForNextTurn = game is null ? null : ResolveForcedTargetPlayerNameForNextTurn(game);
+        var recentEffectCue = game is null ? null : ResolveRecentEffectCue(game);
+        var revealedPileTotalsByPlayer = game is null ? null : ResolveRevealedPileTotalsByPlayer(game);
+        var previousActivePlayerId = game is null ? null : ResolvePreviousActivePlayerId(game);
 
         return new LobbyStateDto(
             lobby.LobbyCode,
@@ -96,6 +113,59 @@ public static class LobbyStateMapper
                     {
                         Winner = game.Outcome.Winner,
                         Reason = game.Outcome.Reason
-                    }));
+                    },
+                    forcedTargetPlayerNameForNextTurn,
+                    recentEffectCue,
+                    revealedPileTotalsByPlayer,
+                    previousActivePlayerId));
+    }
+
+    private static IReadOnlyDictionary<string, int> ResolveRevealedPileTotalsByPlayer(TimeBombGame game)
+    {
+        var revealedPileTotals = game.RevealedWires
+            .GroupBy(wire => wire.RevealedFromPlayerId)
+            .ToDictionary(group => group.Key, group => group.Count());
+
+        foreach (var player in game.Players)
+        {
+            revealedPileTotals.TryAdd(player.Id, 0);
+        }
+
+        return revealedPileTotals;
+    }
+
+    private static string? ResolveForcedTargetPlayerNameForNextTurn(TimeBombGame game)
+    {
+        var forcedTargetPlayerId = game.ForcedTargetPlayerIdForNextTurn;
+        if (string.IsNullOrWhiteSpace(forcedTargetPlayerId))
+        {
+            return null;
+        }
+
+        return game.Players.FirstOrDefault(player => player.Id == forcedTargetPlayerId)?.Name ?? forcedTargetPlayerId;
+    }
+
+    private static RecentEffectCueDto? ResolveRecentEffectCue(TimeBombGame game)
+    {
+        var recentEffectWire = game.RevealedWires.LastOrDefault(wire => !string.IsNullOrWhiteSpace(wire.Effect));
+        if (recentEffectWire is null || string.IsNullOrWhiteSpace(recentEffectWire.Effect))
+        {
+            return null;
+        }
+
+        return new RecentEffectCueDto(
+            recentEffectWire.Round,
+            recentEffectWire.Turn,
+            recentEffectWire.Effect,
+            recentEffectWire.ActivePlayerId,
+            recentEffectWire.RevealedFromPlayerId,
+            recentEffectWire.ForcedTargetPlayerId,
+            recentEffectWire.ForcedTargetPlayerName);
+    }
+
+    private static string? ResolvePreviousActivePlayerId(TimeBombGame game)
+    {
+        var lastRevealedWire = game.RevealedWires.LastOrDefault();
+        return lastRevealedWire?.ActivePlayerId;
     }
 }

@@ -132,3 +132,28 @@ All 12 core API/hub touchpoints verified ready. No breaking changes needed.
 - Keep DTOs additive; document `RevealedPileTotalsByPlayer` as source-of-truth
 - Add focused mapper coverage for new totals normalization contract
 - Preserve variant guardrails: no special-effect leakage into Standard
+
+## 2026-02-23: Phase 4 Backend Metadata Support
+**Status:** ✅ Complete
+
+**Deliverable:** Added `PreviousActivePlayerId` optional metadata to `GameRuntimeDto`
+
+**Key Outcomes:**
+- New field: `PreviousActivePlayerId` (additive, optional runtime metadata)
+- Mapped from last revealed wire's `ActivePlayerId` for turn-transition animations
+- Enables Phase 4 UI turn-token path animation around circular player table
+- Fully backward-compatible; zero breaking changes
+- Validation: `dotnet build .\TimeBomb.sln -nologo` ✅ and `dotnet test .\TimeBomb.sln -nologo` ✅ (17/17 tests)
+- Minimal implementation: single optional field, single mapper method, no gameplay changes
+
+**Implementation Notes:**
+- `PreviousActivePlayerId` resolves from `game.RevealedWires.LastOrDefault()?.ActivePlayerId`
+- Returns null when no wires revealed (game start, round prep)
+- Frontend can animate turn token movement from previous to current active player
+- Complements existing metadata: `RevealedPileTotalsByPlayer` (Phase 3), `RecentEffectCue` (Phase 2)
+
+**Phase 4 Animation Support Summary:**
+- ✅ Turn-path animation: `PreviousActivePlayerId` → `ActivePlayerId` (NEW)
+- ✅ Reveal-lane animation: `RevealedFromPlayerId` → history (existing `RevealedWire`)
+- ✅ Player pile chips: `RevealedPileTotalsByPlayer` (Phase 3)
+- ✅ Prep fan/shuffle: `IsRoundPreparation` + `GetVisibleHandForPlayer` (existing)

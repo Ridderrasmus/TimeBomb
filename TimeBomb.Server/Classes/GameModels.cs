@@ -56,7 +56,9 @@ public sealed record RevealedWire(
     WireCard Card,
     WireColor? DefusedColorAssigned,
     WireColor? ReactivatedColor,
-    string? Effect);
+    string? Effect,
+    string? ForcedTargetPlayerId = null,
+    string? ForcedTargetPlayerName = null);
 
 public sealed class GameOutcome
 {

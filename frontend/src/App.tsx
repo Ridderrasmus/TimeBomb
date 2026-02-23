@@ -4,8 +4,13 @@ import {
   LogLevel,
 } from "@microsoft/signalr";
 import { useEffect, useRef, useState } from "react";
-import type { FormEvent } from "react";
+import type { CSSProperties, FormEvent } from "react";
 import "./App.css";
+import { PlayerStatusCards } from "./components/PlayerStatusCards";
+import { RevealedPileTotals } from "./components/RevealedPileTotals";
+import { RevealedWireHistory } from "./components/RevealedWireHistory";
+import { TurnStateProminence } from "./components/TurnStateProminence";
+import { WireVisualCard } from "./components/WireVisualCard";
 
 type LobbyMode = "create" | "join";
 const PLAYER_NAME_STORAGE_KEY = "timebomb.playerName";
@@ -56,6 +61,18 @@ interface RevealedWire {
   defusedColorAssigned?: WireColor | null;
   reactivatedColor?: WireColor | null;
   effect?: string | null;
+  forcedTargetPlayerId?: string | null;
+  forcedTargetPlayerName?: string | null;
+}
+
+interface RecentEffectCue {
+  round: number;
+  turn: number;
+  effect: string;
+  activePlayerId: string;
+  revealedFromPlayerId: string;
+  forcedTargetPlayerId?: string | null;
+  forcedTargetPlayerName?: string | null;
 }
 
 interface LobbyStateDto {
@@ -85,6 +102,7 @@ interface LobbyStateDto {
     isRoundPreparation: boolean;
     readyPlayerIds: string[];
     forcedTargetPlayerIdForNextTurn?: string | null;
+    forcedTargetPlayerNameForNextTurn?: string | null;
     revealedDefuseWireCount: number;
     revealedBombsByColor: Record<WireColor, number>;
     defusedColors: WireColor[];
@@ -95,6 +113,8 @@ interface LobbyStateDto {
       availableColors: WireColor[];
     } | null;
     revealedWires: RevealedWire[];
+    recentEffectCue?: RecentEffectCue | null;
+    revealedPileTotalsByPlayer?: Record<string, number> | null;
     outcome: {
       winner?: "Sherlock" | "Moriarty" | null;
       reason:
@@ -148,6 +168,8 @@ function App() {
     selectedBombColors?: WireColor[] | null;
   } | null>(null);
   const [hubReady, setHubReady] = useState(false);
+  const [selectedPendingDecisionColor, setSelectedPendingDecisionColor] =
+    useState<WireColor | null>(null);
   const hubRef = useRef<HubConnection | null>(null);
 
   const activeLobby = liveLobby;
@@ -173,6 +195,51 @@ function App() {
     !isRoundPreparation &&
     !pendingDecision &&
     !busy;
+  const activeTurnPlayerName = activeGame
+    ? displayedPlayers.find((player) => player.id === activeGame.activePlayerId)
+        ?.name ?? activeGame.activePlayerId
+    : "Unknown player";
+  const isPendingDecisionRequester =
+    pendingDecision?.requestedByPlayerId === playerId;
+  const pendingDecisionRequesterName = pendingDecision
+    ? displayedPlayers.find(
+        (player) => player.id === pendingDecision.requestedByPlayerId,
+      )?.name ?? pendingDecision.requestedByPlayerId
+    : "active player";
+  const recentEffectWire =
+    activeGame?.revealedWires
+      .slice()
+      .reverse()
+      .find((wire) => wire.effect && wire.effect.trim().length > 0) ?? null;
+  const effectCue: RecentEffectCue | null =
+    activeGame?.recentEffectCue ??
+    (recentEffectWire?.effect
+      ? {
+          round: recentEffectWire.round,
+          turn: recentEffectWire.turn,
+          effect: recentEffectWire.effect,
+          activePlayerId: recentEffectWire.activePlayerId,
+          revealedFromPlayerId: recentEffectWire.revealedFromPlayerId,
+          forcedTargetPlayerId: recentEffectWire.forcedTargetPlayerId,
+          forcedTargetPlayerName: recentEffectWire.forcedTargetPlayerName,
+        }
+      : null);
+  const effectActivePlayerName = effectCue
+    ? displayedPlayers.find((player) => player.id === effectCue.activePlayerId)
+        ?.name ?? effectCue.activePlayerId
+    : null;
+  const effectRevealedFromPlayerName = effectCue
+    ? displayedPlayers.find(
+        (player) => player.id === effectCue.revealedFromPlayerId,
+      )?.name ?? effectCue.revealedFromPlayerId
+    : null;
+  const effectForcedTargetName = effectCue?.forcedTargetPlayerName
+    ? effectCue.forcedTargetPlayerName
+    : effectCue?.forcedTargetPlayerId
+      ? displayedPlayers.find(
+          (player) => player.id === effectCue.forcedTargetPlayerId,
+        )?.name ?? effectCue.forcedTargetPlayerId
+      : null;
 
   const refreshPrivateState = async (lobbyCode: string) => {
     if (!hubRef.current) {
@@ -270,6 +337,20 @@ function App() {
     activeLobby?.rules.randomizeCardColors,
     activeLobby?.rules.selectedBombColors,
   ]);
+
+  useEffect(() => {
+    if (!pendingDecision) {
+      setSelectedPendingDecisionColor(null);
+      return;
+    }
+
+    setSelectedPendingDecisionColor((currentSelection) =>
+      currentSelection &&
+      pendingDecision.availableColors.includes(currentSelection)
+        ? currentSelection
+        : null,
+    );
+  }, [pendingDecision]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -469,6 +550,14 @@ function App() {
     }
   };
 
+  const submitPendingDecision = async () => {
+    if (!selectedPendingDecisionColor) {
+      return;
+    }
+
+    await resolvePendingDecision(selectedPendingDecisionColor);
+  };
+
   const markRoundReady = async () => {
     if (!currentLobby) {
       return;
@@ -563,16 +652,16 @@ function App() {
             <p className="subtle lobby-meta">Connecting to game channel...</p>
           )}
 
-          {activeLobby?.state === "InProgress" && (
-            <section
-              className={
-                isMyTurn ? "turn-banner your-turn" : "turn-banner waiting-turn"
-              }
-            >
-              <strong>
-                {isMyTurn ? ">>> YOUR TURN <<<" : "Waiting for other player"}
-              </strong>
-            </section>
+          {activeLobby?.state === "InProgress" && activeGame && (
+            <TurnStateProminence
+              isMyTurn={isMyTurn}
+              round={activeGame.currentRound}
+              maxRounds={activeGame.maxRounds}
+              turnsTakenInRound={activeGame.turnsTakenInRound}
+              roundTurnLimit={activeGame.roundTurnLimit}
+              activePlayerName={activeTurnPlayerName}
+              isRoundPreparation={isRoundPreparation}
+            />
           )}
 
           {privateState?.team && (
@@ -590,17 +679,13 @@ function App() {
                 ):
               </strong>
             </p>
-            <ul className="player-list">
-              {displayedPlayers.map((player) => (
-                <li key={player.id}>
-                  {player.name}
-                  {activeGame?.activePlayerId === player.id ? " (active)" : ""}
-                  {activeLobby?.state === "InProgress"
-                    ? ` - ${player.remainingWireCount} cards`
-                    : ""}
-                </li>
-              ))}
-            </ul>
+            <PlayerStatusCards
+              players={displayedPlayers}
+              currentPlayerId={playerId}
+              forcedTargetPlayerId={activeGame?.forcedTargetPlayerIdForNextTurn}
+              showWireCounts={activeLobby?.state === "InProgress"}
+              circularLayout={activeLobby?.state === "InProgress"}
+            />
           </section>
 
           {activeLobby?.state === "Lobby" && rulesDraft && (
@@ -702,24 +787,40 @@ function App() {
 
           {activeGame && (
             <section className="result game-panel">
-              <p>
-                <strong>Round:</strong> {activeGame.currentRound} /{" "}
-                {activeGame.maxRounds}
-              </p>
-              <p>
-                <strong>Turns this round:</strong>{" "}
-                {activeGame.turnsTakenInRound} / {activeGame.roundTurnLimit}
-              </p>
-              <p>
-                <strong>Defuse wires revealed:</strong>{" "}
-                {activeGame.revealedDefuseWireCount}
-              </p>
-              <p>
-                <strong>Defused colors:</strong>{" "}
-                {activeGame.defusedColors.length > 0
-                  ? activeGame.defusedColors.join(", ")
-                  : "None"}
-              </p>
+              <div className="game-stat-grid">
+                <article className="game-stat-card">
+                  <p className="game-stat-label">Round</p>
+                  <p className="game-stat-value">
+                    {activeGame.currentRound} / {activeGame.maxRounds}
+                  </p>
+                </article>
+                <article className="game-stat-card">
+                  <p className="game-stat-label">Turns this round</p>
+                  <p className="game-stat-value">
+                    {activeGame.turnsTakenInRound} / {activeGame.roundTurnLimit}
+                  </p>
+                </article>
+                <article className="game-stat-card">
+                  <p className="game-stat-label">Defuse revealed</p>
+                  <p className="game-stat-value">
+                    {activeGame.revealedDefuseWireCount}
+                  </p>
+                </article>
+                <article className="game-stat-card">
+                  <p className="game-stat-label">Defused colors</p>
+                  {activeGame.defusedColors.length > 0 ? (
+                    <div className="game-stat-chip-row">
+                      {activeGame.defusedColors.map((color) => (
+                        <span key={color} className="game-stat-chip">
+                          {color}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="game-stat-muted">None yet</p>
+                  )}
+                </article>
+              </div>
 
               {activeGame.outcome.isComplete ? (
                 <p>
@@ -748,32 +849,66 @@ function App() {
                   {activeGame.forcedTargetPlayerIdForNextTurn && (
                     <p>
                       <strong>Forced target:</strong>{" "}
-                      {displayedPlayers.find(
-                        (player) =>
-                          player.id ===
-                          activeGame.forcedTargetPlayerIdForNextTurn,
-                      )?.name ?? activeGame.forcedTargetPlayerIdForNextTurn}
+                      {activeGame.forcedTargetPlayerNameForNextTurn ??
+                        displayedPlayers.find(
+                          (player) =>
+                            player.id ===
+                            activeGame.forcedTargetPlayerIdForNextTurn,
+                        )?.name ??
+                        activeGame.forcedTargetPlayerIdForNextTurn}
                     </p>
                   )}
                 </>
               )}
+
+              {effectCue && (
+                <section className="result effect-cue-panel" aria-live="polite">
+                  <p className="effect-cue-kicker">
+                    Effect cue · R{effectCue.round} T{effectCue.turn}
+                  </p>
+                  <p className="effect-cue-text">{effectCue.effect}</p>
+                  <p className="subtle effect-cue-meta">
+                    {effectActivePlayerName} cut {effectRevealedFromPlayerName}
+                  </p>
+                  {effectForcedTargetName && (
+                    <p className="subtle effect-cue-meta">
+                      Forced target: {effectForcedTargetName}
+                    </p>
+                  )}
+                </section>
+              )}
+              <RevealedPileTotals
+                wires={activeGame.revealedWires}
+                players={displayedPlayers}
+                totalsByPlayer={activeGame.revealedPileTotalsByPlayer ?? null}
+              />
 
               {isRoundPreparation && (
                 <div className="result prep-panel">
                   <p>
                     <strong>Your current hand (before shuffle):</strong>
                   </p>
-                  <ul className="player-list">
-                    {(privateState?.visibleHand ?? []).map((card, index) => (
-                      <li key={`${card.kind}-${card.color ?? "none"}-${index}`}>
-                        {card.kind}
-                        {card.color ? ` (${card.color})` : ""}
-                      </li>
-                    ))}
-                    {(privateState?.visibleHand ?? []).length === 0 && (
-                      <li>No cards visible.</li>
-                    )}
-                  </ul>
+                  {(privateState?.visibleHand ?? []).length > 0 ? (
+                    <ul
+                      className={`wire-hand-fan${isReadyForRound ? " is-round-ready" : ""}`}
+                    >
+                      {(privateState?.visibleHand ?? []).map((card, index) => (
+                        <li
+                          key={`${card.kind}-${card.color ?? "none"}-${index}`}
+                          className="wire-hand-card-item"
+                          style={{ "--fan-index": index } as CSSProperties}
+                        >
+                          <WireVisualCard
+                            kind={card.kind}
+                            color={card.color}
+                            subtitle={`Card ${index + 1}`}
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="subtle">No cards visible.</p>
+                  )}
 
                   <button
                     type="button"
@@ -821,53 +956,71 @@ function App() {
                 )}
 
               {pendingDecision && (
-                <div className="result decision-panel">
-                  <p>
-                    <strong>
-                      {pendingDecision.type === "AssignDefuseColor"
-                        ? "Choose a color to defuse"
-                        : "Choose a defused color to reactivate"}
-                    </strong>
-                  </p>
-                  <div className="action-row">
-                    {pendingDecision.availableColors.map((color) => (
-                      <button
-                        key={color}
-                        type="button"
-                        className="mode-button"
-                        disabled={
-                          busy ||
-                          pendingDecision.requestedByPlayerId !== playerId
-                        }
-                        onClick={() => resolvePendingDecision(color)}
-                      >
-                        {color}
-                      </button>
-                    ))}
-                  </div>
-                  {pendingDecision.requestedByPlayerId !== playerId && (
-                    <p className="subtle">
-                      Waiting for active player to choose.
+                <div className="decision-overlay" role="presentation">
+                  <section
+                    className="result decision-panel"
+                    aria-live="assertive"
+                    aria-label="Pending decision"
+                  >
+                    <p className="decision-kicker">Pending decision</p>
+                    <p>
+                      <strong>
+                        {pendingDecision.type === "AssignDefuseColor"
+                          ? "Choose a color to defuse"
+                          : "Choose a defused color to reactivate"}
+                      </strong>
                     </p>
-                  )}
+                    <p className="subtle">
+                      {isPendingDecisionRequester
+                        ? "Select one color and confirm your choice."
+                        : `Waiting for ${pendingDecisionRequesterName} to confirm.`}
+                    </p>
+                    <div className="action-row decision-color-row">
+                      {pendingDecision.availableColors.map((color) => {
+                        const isSelected = selectedPendingDecisionColor === color;
+
+                        return (
+                          <button
+                            key={color}
+                            type="button"
+                            className={`mode-button decision-color-option${isSelected ? " decision-color-selected active" : ""}`}
+                            disabled={busy || !isPendingDecisionRequester}
+                            onClick={() => setSelectedPendingDecisionColor(color)}
+                          >
+                            {color}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {isPendingDecisionRequester ? (
+                      <>
+                        <p className="subtle decision-selection-status">
+                          {selectedPendingDecisionColor
+                            ? `Selected: ${selectedPendingDecisionColor}`
+                            : "No color selected yet."}
+                        </p>
+                        <button
+                          type="button"
+                          className="submit-button decision-submit"
+                          disabled={busy || !selectedPendingDecisionColor}
+                          onClick={submitPendingDecision}
+                        >
+                          {busy
+                            ? "Submitting..."
+                            : selectedPendingDecisionColor
+                              ? `Confirm ${selectedPendingDecisionColor}`
+                              : "Confirm selection"}
+                        </button>
+                      </>
+                    ) : null}
+                  </section>
                 </div>
               )}
 
-              <p>
-                <strong>Revealed wires:</strong>
-              </p>
-              <ul className="player-list">
-                {activeGame.revealedWires
-                  .slice()
-                  .reverse()
-                  .map((wire, index) => (
-                    <li key={`${wire.round}-${wire.turn}-${index}`}>
-                      R{wire.round}T{wire.turn}: {wire.card.kind}
-                      {wire.card.color ? ` (${wire.card.color})` : ""}
-                      {wire.effect ? ` - ${wire.effect}` : ""}
-                    </li>
-                  ))}
-              </ul>
+              <RevealedWireHistory
+                wires={activeGame.revealedWires}
+                players={displayedPlayers}
+              />
             </section>
           )}
 

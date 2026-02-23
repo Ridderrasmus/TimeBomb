@@ -92,6 +92,20 @@
 - Mapper contracts validated; DTO integrity maintained
 - Phase 3 regression locks ready for production
 
+## 2026-02-23: Phase 4 Regression Lock Expansion
+**Status:** ✅ Complete
+
+**Deliverable:** Expanded `RevealedPileTotalsByPlayer` mapper coverage for both variants
+
+**Key Outcomes:**
+- Added standalone mapper regression tests for `RevealedPileTotalsByPlayer` in Standard and Evolution variants
+- Verified all-player normalization (zero-default behavior for unmatched players)
+- Extended Phase 3 Evolution regression to validate `RevealedPileTotalsByPlayer` integrity
+- All 17 backend tests passing (15 previous + 2 new mapper-focused tests)
+- Standard/Evolution variant locks preserved; no cross-variant leakage
+- Mapper contract robustness increased for Phase 4 DTO expansion
+- Deterministic pattern maintained per skill guidelines
+
 ## Next Phase QA Recommendations (From Ripley Vision)
 - Add visual regression checklist for card-first surfaces (history cards, prep cards, totals chips, forced-target cue)
 - Run frontend fixture checks for circular/table layouts at desktop/tablet/mobile breakpoints

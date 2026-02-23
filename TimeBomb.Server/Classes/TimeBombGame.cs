@@ -113,6 +113,7 @@ public class TimeBombGame
         RevealedWires.Add(revealed);
 
         var pendingDecision = EvaluateRevealAndPrepareDecision(revealed);
+        revealed = RevealedWires[^1];
         if (pendingDecision is not null)
         {
             CurrentPendingDecision = pendingDecision;
@@ -274,11 +275,6 @@ public class TimeBombGame
 
         if (Variant != GameVariant.Evolution)
         {
-            if (color == WireColor.Red)
-            {
-                ApplyRedEffect();
-            }
-
             return null;
         }
 
@@ -310,6 +306,11 @@ public class TimeBombGame
 
     private void ApplyRedEffect()
     {
+        if (Variant != GameVariant.Evolution)
+        {
+            return;
+        }
+
         var candidates = Players
             .Where(player => player.HasCards)
             .ToList();
@@ -319,7 +320,12 @@ public class TimeBombGame
             var forced = candidates[_random.Next(candidates.Count)];
             ForcedTargetPlayerIdForNextTurn = forced.Id;
             var latest = RevealedWires[^1];
-            RevealedWires[^1] = latest with { Effect = $"Next turn target is forced to {forced.Name}." };
+            RevealedWires[^1] = latest with
+            {
+                Effect = $"Next turn target is forced to {forced.Name}.",
+                ForcedTargetPlayerId = forced.Id,
+                ForcedTargetPlayerName = forced.Name
+            };
         }
     }
 

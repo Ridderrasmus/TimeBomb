@@ -25,6 +25,12 @@
   - All 15 backend tests passing; frontend build clean; lint unchanged (2 baseline warnings only)
   - Ripley approved Phase 3 batch as production-ready
   - Next-phase vision captured: shift to "feel the table" with motion cues and spatial positioning
+- **2026-02-23: Phase 4 Board Polish Slice (Implementation Batch)**
+  - Added a card-first reveal lane emphasizing the most recent reveal with low-text metadata
+  - Enhanced revealed-pile totals with progress cues and contributor chips using existing `revealedWires` data, plus optional additive `revealedPileTotalsByPlayer` metadata when present
+  - Increased circular table readability with active turn-path/token emphasis and mobile-safe fallback to stacked cards
+  - Added subtle round-prep hand fan settle + ready-state shuffle-away transition with reduced-motion fallback
+  - Validation preserved baseline behavior: lint still reports only the existing two App.tsx hook warnings; build succeeds
 
 ## 2026-02-22: Phase 1–3 Task Assignments (from Ripley briefing)
 **Status:** ✅ Complete
