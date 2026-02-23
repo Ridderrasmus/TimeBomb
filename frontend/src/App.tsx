@@ -798,6 +798,9 @@ function App() {
                     forcedTargetPlayerId={activeGame?.forcedTargetPlayerIdForNextTurn}
                     showWireCounts={true}
                     circularLayout={true}
+                    showCutButtons={!pendingDecision && !isRoundPreparation}
+                    onCutPlayer={revealWire}
+                    canCut={canReveal}
                   />
 
                   {/* Recent revealed cards on table */}
@@ -970,36 +973,6 @@ function App() {
                   </button>
                 </div>
               )}
-
-              {activeLobby?.state === "InProgress" &&
-                !pendingDecision &&
-                !isRoundPreparation && (
-                  <div className="action-row">
-                    {displayedPlayers
-                      .filter(
-                        (player) =>
-                          player.id !== playerId &&
-                          player.remainingWireCount > 0,
-                      )
-                      .filter(
-                        (player) =>
-                          !activeGame.forcedTargetPlayerIdForNextTurn ||
-                          player.id ===
-                            activeGame.forcedTargetPlayerIdForNextTurn,
-                      )
-                      .map((player) => (
-                        <button
-                          key={player.id}
-                          type="button"
-                          className="mode-button"
-                          disabled={!canReveal}
-                          onClick={() => revealWire(player.id)}
-                        >
-                          Cut {player.name}
-                        </button>
-                      ))}
-                  </div>
-                )}
 
               {pendingDecision && (
                 <div className="decision-overlay" role="presentation">

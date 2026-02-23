@@ -13,6 +13,9 @@ interface PlayerStatusCardsProps {
   forcedTargetPlayerId?: string | null;
   showWireCounts: boolean;
   circularLayout?: boolean;
+  showCutButtons?: boolean;
+  onCutPlayer?: (playerId: string) => void;
+  canCut?: boolean;
 }
 
 export function PlayerStatusCards({
@@ -21,6 +24,9 @@ export function PlayerStatusCards({
   forcedTargetPlayerId,
   showWireCounts,
   circularLayout = false,
+  showCutButtons = false,
+  onCutPlayer,
+  canCut = false,
 }: PlayerStatusCardsProps) {
   const useCircularLayout = circularLayout && players.length > 2;
   const activeSeatIndex = useCircularLayout
@@ -85,6 +91,19 @@ export function PlayerStatusCards({
                 ? `${player.remainingWireCount} wire${player.remainingWireCount === 1 ? "" : "s"} remaining`
                 : "Waiting in lobby"}
             </p>
+            {showCutButtons &&
+              !isSelf &&
+              player.remainingWireCount > 0 &&
+              (!forcedTargetPlayerId || isForcedTarget) && (
+                <button
+                  type="button"
+                  className="player-cut-button"
+                  disabled={!canCut}
+                  onClick={() => onCutPlayer?.(player.id)}
+                >
+                  Cut wire
+                </button>
+              )}
           </li>
         );
       })}

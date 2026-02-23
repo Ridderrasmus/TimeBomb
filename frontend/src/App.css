@@ -636,6 +636,32 @@ button:disabled {
   color: var(--text-muted);
 }
 
+.player-cut-button {
+  margin-top: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-soft);
+  background: var(--surface-card);
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+
+.player-cut-button:hover:not(:disabled) {
+  border-color: var(--accent-start);
+  background: linear-gradient(135deg, var(--accent-start), var(--accent-end));
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(93, 102, 228, 0.3);
+}
+
+.player-cut-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .player-status-seat {
   font-size: 0.72rem;
   text-transform: uppercase;
