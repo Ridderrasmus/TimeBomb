@@ -735,6 +735,206 @@ button:disabled {
   box-shadow: 0 0 0 3px rgba(116, 143, 255, 0.22);
 }
 
+.table-surface {
+  margin: 0;
+  padding: 0;
+  border-radius: 20px;
+  border: 2px solid var(--border-strong);
+  background: linear-gradient(
+    145deg,
+    rgba(41, 56, 116, 0.42),
+    rgba(29, 42, 88, 0.28)
+  );
+  box-shadow: 
+    0 16px 40px rgba(5, 10, 28, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.table-surface-inner {
+  padding: clamp(1.2rem, 3vw, 2.4rem);
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  align-items: center;
+  min-height: clamp(22rem, 54vw, 32rem);
+  position: relative;
+}
+
+.table-revealed-cards {
+  position: absolute;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
+  z-index: 1;
+}
+
+.table-revealed-label {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.table-revealed-row {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.table-revealed-card {
+  opacity: 0.7;
+  transition: opacity 180ms ease, transform 180ms ease;
+  animation: tableCardEnter 320ms ease both;
+}
+
+.table-revealed-card:hover {
+  opacity: 1;
+  transform: translateY(-3px);
+}
+
+.table-revealed-card.is-latest {
+  opacity: 1;
+  transform: scale(1.08);
+  filter: drop-shadow(0 8px 16px rgba(109, 132, 255, 0.32));
+  animation: tableCardPulse 2s ease-in-out infinite;
+}
+
+.table-player-hand {
+  position: absolute;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
+  z-index: 1;
+}
+
+.table-hand-label {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.table-hand-fan {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  gap: 0.5rem;
+  perspective: 820px;
+}
+
+.table-hand-card-item {
+  min-width: 0;
+  --fan-index: 0;
+}
+
+.table-hand-card-item .wire-visual-card {
+  transform: translateY(0) rotate(calc((var(--fan-index) - 2) * 1.8deg));
+  transform-origin: center bottom;
+  transition: transform 220ms ease, opacity 220ms ease;
+  animation: tableHandEnter 280ms ease both;
+  animation-delay: calc(var(--fan-index) * 42ms);
+}
+
+.table-hand-card-item .wire-visual-card:hover {
+  transform: translateY(-6px) rotate(calc((var(--fan-index) - 2) * 1.8deg)) scale(1.05);
+}
+
+.table-hand-fan.is-round-ready .table-hand-card-item .wire-visual-card {
+  transform: translateY(-7px) scale(0.96) rotate(calc((var(--fan-index) - 2) * -1.4deg));
+  opacity: 0.72;
+  filter: saturate(0.82) blur(0.45px);
+}
+
+/* Mobile responsive adjustments for table */
+@media (max-width: 768px) {
+  .table-surface-inner {
+    min-height: clamp(20rem, 75vw, 28rem);
+    padding: clamp(0.8rem, 2vw, 1.2rem);
+  }
+
+  .table-revealed-cards {
+    bottom: 0.5rem;
+  }
+
+  .table-player-hand {
+    top: 0.5rem;
+  }
+
+  .table-hand-fan,
+  .table-revealed-row {
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .table-hand-card-item .wire-visual-card,
+  .table-revealed-card {
+    transform: none !important;
+  }
+
+  .player-status-grid.is-circular {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.5rem;
+    min-height: auto;
+    margin-top: 0;
+  }
+
+  .player-status-grid.is-circular::before,
+  .player-status-grid.is-circular::after {
+    display: none;
+  }
+
+  .player-status-grid.is-circular .player-status-card {
+    position: static;
+    transform: none;
+    width: auto;
+  }
+}
+
+@keyframes tableCardEnter {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.9);
+  }
+  to {
+    opacity: 0.7;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes tableCardPulse {
+  0%, 100% {
+    transform: scale(1.08);
+  }
+  50% {
+    transform: scale(1.12);
+  }
+}
+
+@keyframes tableHandEnter {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) rotate(calc((var(--fan-index) - 2) * 1.8deg)) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(calc((var(--fan-index) - 2) * 1.8deg)) scale(1);
+  }
+}
+
 .action-row {
   display: flex;
   flex-wrap: wrap;

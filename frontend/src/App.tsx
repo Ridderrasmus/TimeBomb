@@ -672,21 +672,23 @@ function App() {
             </section>
           )}
 
-          <section className="result players-panel">
-            <p>
-              <strong>
-                Players ({(activeLobby?.players ?? currentLobby.players).length}
-                ):
-              </strong>
-            </p>
-            <PlayerStatusCards
-              players={displayedPlayers}
-              currentPlayerId={playerId}
-              forcedTargetPlayerId={activeGame?.forcedTargetPlayerIdForNextTurn}
-              showWireCounts={activeLobby?.state === "InProgress"}
-              circularLayout={activeLobby?.state === "InProgress"}
-            />
-          </section>
+          {activeLobby?.state === "Lobby" && (
+            <section className="result players-panel">
+              <p>
+                <strong>
+                  Players ({(activeLobby?.players ?? currentLobby.players).length}
+                  ):
+                </strong>
+              </p>
+              <PlayerStatusCards
+                players={displayedPlayers}
+                currentPlayerId={playerId}
+                forcedTargetPlayerId={activeGame?.forcedTargetPlayerIdForNextTurn}
+                showWireCounts={false}
+                circularLayout={false}
+              />
+            </section>
+          )}
 
           {activeLobby?.state === "Lobby" && rulesDraft && (
             <section className="result rules-panel">
@@ -787,6 +789,70 @@ function App() {
 
           {activeGame && (
             <section className="result game-panel">
+              {/* Main Table Surface - Primary gameplay area */}
+              <div className="table-surface">
+                <div className="table-surface-inner">
+                  <PlayerStatusCards
+                    players={displayedPlayers}
+                    currentPlayerId={playerId}
+                    forcedTargetPlayerId={activeGame?.forcedTargetPlayerIdForNextTurn}
+                    showWireCounts={true}
+                    circularLayout={true}
+                  />
+
+                  {/* Recent revealed cards on table */}
+                  {activeGame.revealedWires.length > 0 && (
+                    <div className="table-revealed-cards">
+                      <p className="table-revealed-label">Recent reveals:</p>
+                      <div className="table-revealed-row">
+                        {activeGame.revealedWires
+                          .slice(-3)
+                          .reverse()
+                          .map((wire, index) => (
+                            <div
+                              key={`${wire.round}-${wire.turn}`}
+                              className={`table-revealed-card${index === 0 ? " is-latest" : ""}`}
+                            >
+                              <WireVisualCard
+                                kind={wire.card.kind}
+                                color={wire.card.color}
+                                subtitle={`R${wire.round} T${wire.turn}`}
+                              />
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Player hand on table during prep or active play */}
+                  {(privateState?.visibleHand ?? []).length > 0 && (
+                    <div className={`table-player-hand${isRoundPreparation ? " is-prep-phase" : ""}`}>
+                      <p className="table-hand-label">
+                        {isRoundPreparation ? "Your hand (before shuffle):" : "Your hand:"}
+                      </p>
+                      <ul
+                        className={`table-hand-fan${isReadyForRound && isRoundPreparation ? " is-round-ready" : ""}`}
+                      >
+                        {(privateState?.visibleHand ?? []).map((card, index) => (
+                          <li
+                            key={`${card.kind}-${card.color ?? "none"}-${index}`}
+                            className="table-hand-card-item"
+                            style={{ "--fan-index": index } as CSSProperties}
+                          >
+                            <WireVisualCard
+                              kind={card.kind}
+                              color={card.color}
+                              subtitle={`Card ${index + 1}`}
+                            />
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Game stats - moved below table */}
               <div className="game-stat-grid">
                 <article className="game-stat-card">
                   <p className="game-stat-label">Round</p>
@@ -886,30 +952,14 @@ function App() {
               {isRoundPreparation && (
                 <div className="result prep-panel">
                   <p>
-                    <strong>Your current hand (before shuffle):</strong>
+                    <strong>Preparation phase (Round {activeGame.currentRound})</strong>
                   </p>
-                  {(privateState?.visibleHand ?? []).length > 0 ? (
-                    <ul
-                      className={`wire-hand-fan${isReadyForRound ? " is-round-ready" : ""}`}
-                    >
-                      {(privateState?.visibleHand ?? []).map((card, index) => (
-                        <li
-                          key={`${card.kind}-${card.color ?? "none"}-${index}`}
-                          className="wire-hand-card-item"
-                          style={{ "--fan-index": index } as CSSProperties}
-                        >
-                          <WireVisualCard
-                            kind={card.kind}
-                            color={card.color}
-                            subtitle={`Card ${index + 1}`}
-                          />
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="subtle">No cards visible.</p>
-                  )}
-
+                  <p className="subtle">
+                    Review your hand below. When ready, it will be shuffled.
+                  </p>
+                  <p className="subtle">
+                    {activeGame.readyPlayerIds.length} / {displayedPlayers.length} players ready
+                  </p>
                   <button
                     type="button"
                     className="submit-button"
@@ -918,10 +968,6 @@ function App() {
                   >
                     {isReadyForRound ? "Ready submitted" : "I'm ready"}
                   </button>
-                  <p className="subtle">
-                    When everyone is ready, hands are hidden and shuffled
-                    automatically.
-                  </p>
                 </div>
               )}
 

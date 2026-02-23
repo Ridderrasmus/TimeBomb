@@ -14,3 +14,8 @@
 | Bishop | Tester | Game logic scenarios, edge cases, regression tests | 🧪 QA |
 | Scribe | Session Logger | Decisions, cross-agent memory, session logs | 📋 Scribe |
 | Ralph | Work Monitor | Backlog monitoring and continuous work checks | 🔄 Monitor |
+
+## Issue Source
+**Repository:** Ridderrasmus/TimeBomb  
+**Connected:** 2026-02-23  
+**Filters:** Issues with `squad` label and `squad:{member}` sub-labels for assignment
