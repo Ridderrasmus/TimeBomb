@@ -157,3 +157,49 @@ All 12 core API/hub touchpoints verified ready. No breaking changes needed.
 - ✅ Reveal-lane animation: `RevealedFromPlayerId` → history (existing `RevealedWire`)
 - ✅ Player pile chips: `RevealedPileTotalsByPlayer` (Phase 3)
 - ✅ Prep fan/shuffle: `IsRoundPreparation` + `GetVisibleHandForPlayer` (existing)
+
+## 2026-02-23: Issue #5 — Game Restart Functionality
+**Status:** ✅ Complete (PR #7 opened)
+
+**Deliverable:** Backend restart functionality for game creator
+
+**Key Changes:**
+- **LobbyStore.cs**: Added `TryRestartGame` method
+  - Validates only creator can restart
+  - Validates game has been started (not in Lobby state)
+  - Creates fresh `TimeBombGame` instance with same players and rules
+  - Resets game state (round 1, cleared wires, new teams, new deal)
+  - Preserves lobby membership, rules, and player list
+- **GameHub.cs**: Added `RestartGame` SignalR hub method
+  - Broadcasts `GameRestarted` event (custom event for UI notification)
+  - Broadcasts `LobbyStateUpdated` event (fresh game state)
+  - Error handling with HubException for validation failures
+- **Testing**: Added 6 comprehensive test cases (23 total tests passing)
+  - Successful restart validation
+  - Player preservation check
+  - Creator-only authorization
+  - Error conditions (lobby not found, game not started)
+  - State reset verification
+
+**Architecture Decision:**
+- Chose to create new `TimeBombGame` instance rather than reset existing one
+- Reasoning: Reduces risk of partial state reset bugs, maintains immutability pattern
+- Game ID changes on restart (allows frontend to detect restart vs state update)
+
+**Frontend Integration Points:**
+1. Listen for `GameRestarted` event for restart notifications
+2. Add restart button (creator-only, InProgress/Completed state)
+3. Call `connection.invoke('RestartGame', lobbyCode, playerId)`
+4. Clear cached UI state on restart (private hand, pending decisions)
+5. Handle HubException for authorization failures
+
+**File Paths:**
+- `TimeBomb.Server/Classes/LobbyStore.cs` (TryRestartGame method)
+- `TimeBomb.Server/Hubs/GameHub.cs` (RestartGame hub method)
+- `TimeBomb.Server.Tests/UnitTest1.cs` (restart test cases)
+
+**User Preference:**
+- Always preserve lobby membership during restart (keep players, don't kick)
+- Creator is only authority for restart (matches StartGame pattern)
+- Maintain consistency with existing LobbyStore patterns (TryX pattern, lock-based thread-safety)
+
