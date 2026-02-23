@@ -598,3 +598,103 @@ Ripley:
 2. Run frontend fixture checks for circular/table layouts at desktop/tablet/mobile
 3. Validate reduced-motion behavior and keyboard/screen-reader flow
 4. Add visual regression checklist for card-first surfaces
+
+---
+
+## 2026-02-23: Phase 4 Board Polish Batch — Implementation Complete and Approved
+
+### 2026-02-23T15:47:00Z: Hicks — Phase 4 Board Polish Implementation Complete
+**By:** Hicks (Frontend UI Developer)
+**What:** Delivered Phase 4 board-game polish enhancements: reveal lane presentation, revealed-pile analytics upgrade, circular table turn-path clarity, and tactile round-prep hand transition.
+
+**Decisions:**
+1. **Reveal lane as first-class visual surface:** Recent-reveal lane above history list prioritizes `WireVisualCard` rendering with minimal text (`R/T` + attribution).
+2. **Revealed pile readability upgrade:** Added Bomb/Defuse progress bars, color-level micro meters, and top-contributor chips. Data strategy: derive from existing `revealedWires` first, consume optional `revealedPileTotalsByPlayer` when present.
+3. **Circular table turn-path clarity:** Active-turn ring arc + token emphasis around circular seats. Forced-target visual pressure cue through ring styling. Responsive/mobile fallback preserved.
+4. **Round-prep hand transition made tactile:** Subtle prep fan settle animation and ready-state shuffle-away visual cue. Reduced-motion fallback included.
+
+**Constraints Confirmed:**
+- No gameplay/network/rules logic changes
+- Frontend changes additive and behavior-safe
+- Mobile-safe and reduced-motion fallbacks included
+
+**Validation:**
+- `npm --prefix .\frontend run lint` ✅ (2 baseline App.tsx hook warnings)
+- `npm --prefix .\frontend run build` ✅
+
+**Impact:** Phase 4 UI slice production-ready; board-game feel achieved without breaking changes.
+
+---
+
+### 2026-02-23T15:47:00Z: Parker — Phase 4 Turn-Transition Metadata Support
+**By:** Parker (Backend Specialist)
+**What:** Added optional `PreviousActivePlayerId` field to `GameRuntimeDto` to enable Phase 4 turn-token path animations.
+
+**Decision:** Track previous active player from most recent revealed wire to support smooth turn-token transition animations without changing gameplay logic.
+
+**Implementation:**
+- New field: `PreviousActivePlayerId` (optional, nullable)
+- Mapper logic: `ResolvePreviousActivePlayerId` returns `ActivePlayerId` from last revealed wire
+- Behavior: Returns `null` when no wires revealed (game start, round prep)
+- Fully backward-compatible
+
+**Animation Support Matrix:**
+| Animation Feature | Backend Support | Status |
+|------------------|----------------|--------|
+| Turn-token path | `PreviousActivePlayerId` → `ActivePlayerId` | ✅ NEW |
+| Reveal-lane | `RevealedFromPlayerId`, `ActivePlayerId` in `RevealedWire` | ✅ Existing |
+| Player pile chips | `RevealedPileTotalsByPlayer` (Phase 3) | ✅ Existing |
+| Prep fan/shuffle | `IsRoundPreparation` + `GetVisibleHandForPlayer` | ✅ Existing |
+
+**Validation:**
+- `dotnet build .\TimeBomb.sln -nologo` ✅
+- `dotnet test .\TimeBomb.sln -nologo` ✅ (17/17 tests)
+- Zero breaking changes; backward-compatible optional field
+- No gameplay logic changes; variant guardrails preserved
+
+**Impact:** Minimal implementation (1 field, 1 mapper method); maintains additive-only DTO pattern from Phases 2–3.
+
+---
+
+### 2026-02-23T15:47:00Z: Ripley — Phase 4 Lead Review Gate (APPROVED)
+**By:** Ripley (Lead Coordinator)
+
+**Review Criteria:**
+
+1. **UI Clearly More Board-Like/Fun and Less Wall-of-Text** ✅ PASS
+   - Circular table layout with turn-token indicator and forced-target path highlighting (>980px)
+   - Card-centric wire visuals via `WireVisualCard` component replace raw text
+   - Revealed-pile analytics: top-3 contributors, Defuse/Bomb progress bars, per-color breakdowns (6 colors)
+   - Recent reveals lane: Top-3 wires with latest-item pulse animation
+   - Visual hand fan with card grid and subtle rotation (disabled at <760px)
+
+2. **Changes Remain Additive and Low-Risk** ✅ PASS
+   - Frontend: New components added without modifying game logic or API contracts
+   - Backend: `LobbyStateDto` extended with optional fields (`revealedPileTotalsByPlayer`, `previousActivePlayerId`)
+   - Mapper logic: Additive helper methods with null fallback
+   - No breaking changes; all existing contracts and behavior preserved
+
+3. **Standard-vs-Evolution Behavior Locks Remain Intact** ✅ PASS
+   - Red forced-target effect still Evolution-only (validated in UnitTest1.cs lines 136–275)
+   - Mapper assertions confirm Standard variant leaves forced-target metadata null
+   - No new variant-conditional code in Phase 4
+
+4. **Validation Evidence Supports Readiness** ✅ PASS
+   - `dotnet build .\TimeBomb.sln` ✅
+   - `dotnet test .\TimeBomb.sln` ✅ (17 passing tests, including 4 new mapper tests)
+   - `npm --prefix .\frontend run build` ✅
+   - `npm --prefix .\frontend run lint` ✅ (2 baseline warnings only)
+
+5. **Must-Fix Issues** NONE
+
+**Verdict:** ✅ **APPROVED** — Phase 4 production-ready. Recommend merge and progression to next slice.
+
+**Next Slice Targets (Week 5):**
+1. **Animation polish:** Smooth wire reveal transitions, pile update animations, card flip effects
+2. **Turn choreography:** Active-player highlight sequence refinement, forced-target path animation tuning
+3. **Accessibility audit:** ARIA labels for progress bars, circular layout semantics, screen-reader testing
+
+**Follow-up (Week 6):**
+4. **Responsive layout stress-testing:** Verify <760px breakpoint with 6-player games and long names
+5. **Performance profiling:** Measure re-render costs for circular layout with CSS animations
+6. **E2E visual regression:** Capture baseline screenshots and validate future changes
