@@ -492,3 +492,109 @@ Ripley:
 - Add mapper/contract tests for `recentEffectCue` projection
 - Add UI integration tests for pending-decision confirm flow
 - Consider Evolution scenario: red forced-target chained across multiple turns
+
+---
+
+## 2026-02-23: Phase 3 Fun UI Batch — Implementation Complete and Approved
+
+### 2026-02-23T09:02:45Z: Hicks — Phase 3 Fun UI Implementation Complete
+**By:** Hicks (Frontend UI Developer)
+**What:** Added additive frontend-only Phase 3 UX upgrades in `frontend/src`: reusable wire card visuals, revealed-pile totals by kind/color, circular in-game player table layout with responsive fallback, and visual pre-shuffle hand cards.
+**Why:** Deliver a more playful/readable in-match experience while preserving existing game logic, API contracts, and SignalR flow.
+**Implementation:**
+- Added reusable `WireVisualCard` rendering component for wire display
+- Replaced text-only wire displays in revealed history and pre-shuffle hand preview with card visuals
+- Implemented `RevealedPileTotals` surface showing aggregate (total, Bomb/Defuse split, per-color)
+- Shifted player cards to circular table layout with responsive fallback to stacked grid
+- All changes frontend-only; zero game logic or contract changes
+**Validation:**
+- `npm --prefix .\frontend run build` ✅
+- `npm --prefix .\frontend run lint` ✅ (2 baseline warnings in App.tsx only)
+- Contract compatibility preserved with existing backend DTOs
+**Impact:** Phase 3 UI slice production-ready; no breaking changes.
+
+---
+
+### 2026-02-23T09:02:45Z: Parker — Phase 3 Backend Metadata Support
+**By:** Parker (Backend Specialist)
+**What:** Added additive optional runtime metadata `RevealedPileTotalsByPlayer` to `GameRuntimeDto` in `TimeBomb.Server\Hubs\LobbyStateDto.cs`, mapped from `TimeBombGame.RevealedWires` and normalized to include all players (0 when no revealed cards).
+**Why:** Enables Phase 3 visual revealed-pile totals in a card-centric UI without changing game rules, event flow, or existing client contracts.
+**Implementation:**
+- New field: `RevealedPileTotalsByPlayer` (additive, optional)
+- Mapper normalizes all players with zero-default behavior
+- Fully backward-compatible; zero breaking changes
+**Validation:**
+- `dotnet build .\TimeBomb.sln -nologo` ✅
+- Metadata correctly populated and accessible to frontend consumers
+- Zero impact on existing REST/SignalR event flow
+**Impact:** Backend phase 3 support production-ready.
+
+---
+
+### 2026-02-23T09:02:45Z: Bishop — Phase 3 Regression Lock Expansion
+**By:** Bishop (QA Specialist)
+**What:** Implemented deterministic mapper-focused regression coverage to validate additive `LobbyStateDto` metadata (`ForcedTargetPlayerNameForNextTurn`, `RecentEffectCue`, and player remaining wire counts) while preserving existing standard-vs-evolution red-effect game behavior locks.
+**Why:** Phase 3 UI/features depend on stable backend cue metadata; mapper assertions prevent silent contract drift after additive DTO changes.
+**Implementation:**
+- Added mapper regression tests for `RevealedPileTotalsByPlayer` normalization
+- Confirmed standard-vs-evolution red-effect locks still enforced
+- Verified all players present with zero-default mapping
+**Validation:**
+- `dotnet test .\TimeBomb.sln -nologo --no-build` ✅ (15 tests passing)
+- Variant behavior locked; no cross-variant leakage
+- All mapper assertions passing
+**Impact:** Phase 3 regression locks validated; DTO integrity maintained.
+
+---
+
+### 2026-02-23T09:02:45Z: Ripley — Phase 3 Review Gate (APPROVED)
+**By:** Ripley (Lead Coordinator)
+**Review Scope:**
+- Frontend: Phase 3 card visuals, revealed totals, circular layout, pre-shuffle hand
+- Backend: `RevealedPileTotalsByPlayer` metadata addition
+- Tests: Mapper regression coverage expansion
+- Integration: Cross-agent coherence check
+**Validation Checkpoints:**
+- `dotnet build .\TimeBomb.sln -nologo` ✅
+- `dotnet test .\TimeBomb.sln -nologo --no-build` ✅ (15/15 passed)
+- `npm --prefix .\frontend run build` ✅
+- `npm --prefix .\frontend run lint` ✅ (2 baseline warnings only)
+**Findings:**
+1. Frontend coherence: Card-first visuals, revealed totals, circular layout all cleanly integrated without gameplay changes
+2. Backend quality: Metadata additive and fully backward-compatible; mapper correctly normalized
+3. Test coverage: Regression locks maintained; mapper assertions validate DTO integrity
+4. Variant protection: Standard-vs-evolution guardrails intact; no cross-variant leakage
+**Non-Blocking Observations:**
+- Next phase should deepen tabletop feel through motion/state choreography
+- Reduced-motion and accessibility handling key for animation enhancements
+- Consider player-attributed pile chips and reveal-lane animation
+**Verdict:** ✅ **APPROVED** — Phase 3 production-ready
+
+---
+
+### 2026-02-23T09:02:45Z: Next-Phase Vision Direction
+**By:** Ripley (Lead Coordinator)
+**Vision Statement:** Shift from "read game state" to "feel the table": keep card-first visuals, then layer motion and spatial cues so reveals, forced-target pressure, and prep-to-shuffle flow are legible in under a second.
+
+**Four Anchors:**
+1. **Revealed pile totals:** Keep totals visible at a glance; tie them to player/table context
+2. **Card visuals over text:** Use visual cards/chips as primary signal; text as secondary context
+3. **Circle/table feel:** Preserve circular seating; add table-centric turn/target movement cues
+4. **Pre-shuffle hand preview:** Make prep hands feel tactile; transition clearly into hidden play
+
+**Hicks Recommendations (Next Batch):**
+1. Add **table-center reveal lane** animating each cut card into history/pile totals (reduced-motion fallback required)
+2. Upgrade pile totals into **player-attributed pile chips** (quick "who-has-cut-most" signal)
+3. Add **turn-token + forced-target path animation** around the circular layout (<500ms, non-blocking)
+4. Enhance prep with **fan + shuffle-away transition** (visible before shuffle is explicit and memorable)
+
+**Parker Recommendations (Next Batch):**
+1. Keep DTOs additive; document `RevealedPileTotalsByPlayer` as source-of-truth
+2. Add focused mapper coverage for new totals normalization contract
+3. Preserve variant guardrails; no special-effect leakage into Standard
+
+**Bishop Recommendations (Next Batch):**
+1. Add regression tests for new mapper totals contracts
+2. Run frontend fixture checks for circular/table layouts at desktop/tablet/mobile
+3. Validate reduced-motion behavior and keyboard/screen-reader flow
+4. Add visual regression checklist for card-first surfaces

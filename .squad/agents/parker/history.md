@@ -8,6 +8,13 @@
 
 ## Learnings
 - Initial charter and context seeded during squad bootstrap.
+- **2026-02-22: Phase 1–2 Backend Support Progression**
+  - Confirmed Phase 1 zero backend changes required; all API contracts ready (LobbyStateDto, RevealedWire, PlayerPrivateStateDto complete)
+  - Phase 2: Added additive optional cue metadata (`forcedTargetPlayerNameForNextTurn`, `recentEffectCue`) to GameRuntimeDto without breaking changes
+  - Phase 2 bugfix: Fixed red forced-target effect leakage into Standard variant; Evolution-only guard now enforced in ApplyRedEffect
+- **2026-02-23: Phase 3 Backend Metadata Support**
+  - Added optional `GameRuntimeDto.RevealedPileTotalsByPlayer` metadata mapped from `TimeBombGame.RevealedWires` for Phase 3 UI revealed-pile visuals
+  - Fully backward-compatible; zero breaking changes; mapper correctly normalizes all players with zero-default behavior
 
 ## 2026-02-22: Phase 1–2 Backend Tasks (from Ripley briefing)
 **Status:** Ready to start
@@ -107,3 +114,21 @@ All 12 core API/hub touchpoints verified ready. No breaking changes needed.
 - Standard variant now exits color-effect handling without red side-effects; Evolution behavior is unchanged.
 - Added regression coverage to verify Standard red reveals produce no forced-target metadata/effect, while Evolution red reveals still do.
 - Validation: `dotnet build .\TimeBomb.sln -nologo` and `dotnet test .\TimeBomb.sln -nologo` passed (13 tests).
+
+## 2026-02-23: Phase 3 Backend Metadata Support
+**Status:** ✅ Complete
+
+**Deliverable:** Added `RevealedPileTotalsByPlayer` optional metadata to `GameRuntimeDto`
+
+**Key Outcomes:**
+- New field: `RevealedPileTotalsByPlayer` (additive, optional runtime metadata)
+- Mapped from `TimeBombGame.RevealedWires` normalized collection
+- Includes all players with zero-default behavior (no revealed cards = 0)
+- Fully backward-compatible; zero breaking changes
+- Validation: `dotnet build .\TimeBomb.sln -nologo` ✅
+- Enables Phase 3 UI visual revealed-pile totals without changing game rules or event flow
+
+## Next Phase Support (From Ripley Vision)
+- Keep DTOs additive; document `RevealedPileTotalsByPlayer` as source-of-truth
+- Add focused mapper coverage for new totals normalization contract
+- Preserve variant guardrails: no special-effect leakage into Standard

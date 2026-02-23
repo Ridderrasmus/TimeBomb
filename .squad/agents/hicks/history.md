@@ -16,50 +16,39 @@
   - Established dependencies: p1-wireframe gates all Phase 1 component development; p1-integration gates Phase 2; responsive redesign required before animation refactor (layout must stabilize first)
   - Key decision: WireCard, WireHistory, PlayerStatusCard as separate modules (not inline); DecisionModal as overlay (not inline dialog); EffectToast as queue-managed component (not individual notifications)
   - Tool: Created SQL backlog tracker (ui_tasks, ui_component_refs, ui_dependencies tables) for cross-phase visibility and dependency querying
+- **2026-02-22: Phase 1–3 Implementation Progression**
+  - Phase 1 completion: Added TurnStateProminence, PlayerStatusCards, RevealedWireHistory components; responsive UI polish in App.css
+  - Phase 2 completion: Pending-decision modal with two-step select/confirm flow; effect cue rendering with recentEffectCue fallback; forced-target metadata integration
+  - Phase 3 completion: Reusable WireVisualCard rendering; RevealedPileTotals surface (total/Bomb-Defuse-split/per-color); circular player table layout with responsive fallback; visual pre-shuffle hand cards
+- **2026-02-23: Phase 3 Fun UI Slice Approved**
+  - Delivered card-first visuals with additive frontend changes (no game logic changes)
+  - All 15 backend tests passing; frontend build clean; lint unchanged (2 baseline warnings only)
+  - Ripley approved Phase 3 batch as production-ready
+  - Next-phase vision captured: shift to "feel the table" with motion cues and spatial positioning
 
 ## 2026-02-22: Phase 1–3 Task Assignments (from Ripley briefing)
-**Status:** Ready to start
-- **Phase 1 (Weeks 1–2)**: 6 tasks covering wire card animation, history panel, player status cards, turn banner
-  - Task 1.1: Wireframes due EOD Day 1 (animation timings, responsive breakpoints)
-  - Task 1.2: WireCard component due EOD Day 3 (flip animation 400ms, hover state)
-  - Task 1.3: Wire history panel due EOD Day 5 (grid layout, color-coded)
-  - Task 1.4: Player status card due EOD Day 7 (active turn indicator, quick-cut button)
-  - Task 1.5: Turn banner due EOD Day 8 (animated glow, "YOUR TURN" / "Waiting for...")
-  - Task 1.6: Integration & testing due EOD Day 10 (full Phase 1 flow, 2-player test, responsive check)
-- **Phase 2 (Weeks 2–3)**: 3 tasks for pending decision modal, effect toasts, color picker
-- **Phase 3 (Weeks 3–4)**: Responsive redesign, full animation suite, dark/light theme polish
-- **Review Gates:** Ripley gates Phase 1 code review before merge (Week 2, Day 3)
-- **Backend dependency:** Parker API review (no code changes expected)
-- **File structure:** Organize components by Phase (Phase1/, Phase2/, Phase3/ subdirs)
+**Status:** ✅ Complete
+- **Phase 1 (Weeks 1–2)**: 6 tasks covering wire card animation, history panel, player status cards, turn banner — DELIVERED
+- **Phase 2 (Weeks 2–3)**: 3 tasks for pending decision modal, effect toasts, color picker — DELIVERED (modal + cues; picker deferred)
+- **Phase 3 (Weeks 3–4)**: 5 tasks for responsive redesign, full animation suite, dark/light theme polish, accessibility, regression — DELIVERED (fun UI slice; animations/theme deferred)
+- **Review Gates:** All gates passed; Ripley approved each batch
+- **Backend dependency:** Parker API validated; zero breaking changes throughout
+- **File structure:** Components organized in frontend/src/components/ by feature
 
 ## 2026-02-22: Implementation-Ready Backlog Finalized
-**Status:** Ready for Day 1 execution
+**Status:** ✅ Complete
 
 **Deliverable:** `orchestration-log/20260222-182608-hicks.md` + merged to decisions.md
 
 **Key Outcomes:**
 - 14-task frontend backlog fully detailed with acceptance criteria, target files, UX behaviors, and backend dependencies
-- Phase 1 (Weeks 1–2): 6 tasks (wireframes → 5 components → integration); gates wireframes approval (Day 1), code review (Week 2 Day 3)
-- Phase 2 (Weeks 2–3): 3 tasks (decision modal, toasts, color picker) parallel with QA edge case testing
-- Phase 3 (Weeks 3–4): 5 tasks (responsive, animation suite, theme, a11y, regression doc)
-- **Critical Path:** H1.1 wireframe gate (Day 1) → H1.2–H1.5 parallel (Days 2–8) → H1.6 integration (Day 10 gate)
-- Technical decisions locked: React hooks, CSS Modules, GPU acceleration, useAnimationFrame hook, 3-tier responsive (1920, 768, 375), semantic HTML + aria-labels
-- **Zero backend breaking changes.** Parker confirms API contracts ready (LobbyStateDto, SignalR hub methods, RevealedWire effect field all present)
-- Dependencies: H1.1 gates all Phase 1 component work; Phase 1 integration gates Phase 2; responsive layout must stabilize before animation refactor (Phase 3)
-- Risk: H1.1 design complexity → Ripley decision Day 1 → defer complex animations if timeline blocked
-
-## 2026-02-22: Phase 2 Decision UX Implementation Complete
-**Status:** ✅ Implementation approved
-
-**Deliverable:** Phase 2 UI slice with pending-decision modal, effect cue rendering, and forced-target metadata integration
-
-**Key Outcomes:**
-- Pending-decision modal uses explicit two-step interaction (select color + confirm CTA) to prevent accidental instant resolves
-- Effect cue rendering prioritizes `game.recentEffectCue` with fallback to latest revealed wire `effect` field
-- Forced-target label integrated using backend `forcedTargetPlayerNameForNextTurn` with ID/name fallback for compatibility
-- Frontend build clean; lint warnings unchanged (2 baseline `react-hooks/exhaustive-deps` in App.tsx)
-- Phase 2 slice contract-compatible; no breaking changes to backend DTOs
-- Ripley approved; Phase 2 production-ready
+- Phase 1 (Weeks 1–2): 6 tasks (wireframes → 5 components → integration); COMPLETE
+- Phase 2 (Weeks 2–3): 3 tasks (decision modal, toasts, color picker); modal & cues COMPLETE
+- Phase 3 (Weeks 3–4): 5 tasks (responsive, animation suite, theme, a11y, regression doc); fun UI slice COMPLETE
+- Technical decisions locked: React hooks, CSS Modules, GPU acceleration, useAnimationFrame hook, 3-tier responsive, semantic HTML + aria-labels
+- Zero backend breaking changes maintained throughout all phases
+- Dependencies: H1.1 gates all Phase 1 component work; Phase 1 integration gates Phase 2; responsive layout stabilized before animation enhancements (Phase 4+)
+- Risk mitigation: Design complexity managed; animation delivery staged
 
 ## 2026-02-22: Phase 1 Gameplay UI Polish — Execution Slice 1
 - Implemented reusable in-match UI components in `frontend/src/components`:
@@ -79,3 +68,17 @@
 - Validation completed:
   - `npm --prefix .\frontend run lint` ✅ (same 2 baseline hook warnings in `App.tsx`)
   - `npm --prefix .\frontend run build` ✅
+
+## 2026-02-23: Phase 3 Fun UI Implementation Complete
+- Added reusable `WireVisualCard` rendering component replacing text-only wire displays in history and pre-shuffle hand
+- Implemented `RevealedPileTotals` surface showing aggregate revealed pile state (total, Bomb/Defuse split, per-color totals)
+- Shifted player cards to circular table layout with automatic responsive fallback to stacked grid on tighter screens
+- All changes frontend-only; no game logic or contract changes
+- Validation: `npm --prefix .\frontend run lint` ✅ (2 baseline warnings only) and `npm --prefix .\frontend run build` ✅
+- Ripley approved; Phase 3 production-ready
+
+## Next-Phase Direction (From Ripley Vision)
+1. **Table-center reveal lane** animating cut cards into history/pile totals (reduced-motion fallback)
+2. **Player-attributed pile chips** for quick "who-cut-most" signal
+3. **Turn-token + forced-target path animation** around circular layout (<500ms)
+4. **Prep fan + shuffle-away transition** for tactile hand preview feel

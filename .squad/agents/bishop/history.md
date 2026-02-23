@@ -14,6 +14,14 @@
 - **Mapper fidelity unknown:** LobbyStateMapper and PlayerPrivateStateMapper transforms untested. Must validate field-by-field against API contract before Phase 1 merge.
 - **Evolution rules ambiguity:** "Unassigned defuse wire" logic in defuse objective unclear. Requires Parker 1-hour session Week 1 to clarify edge case (QA-2.6 blocker).
 - **Responsive + A11y deferred:** Phase 1 focuses on game state rendering; Phases 2–3 add decision flow polish and accessibility. Don't rush accessibility until core flow stable.
+- **Phase 3 regression pattern:** Keep variant-lock tests at game level (`Standard` no special effects, `Evolution` red forced target) and pair them with mapper assertions for additive DTO metadata (`ForcedTargetPlayerNameForNextTurn`, `RecentEffectCue`, per-player remaining pile counts).
+- **Determinism heuristic:** Force a single eligible red-effect target by emptying all other candidates' piles before reveal to keep forced-target assertions stable across runs.
+- **2026-02-23: Phase 3 Regression Expansion Complete**
+  - Expanded mapper regression coverage for additive `LobbyStateDto` metadata
+  - Validated `RevealedPileTotalsByPlayer` normalization (all players present, zero-default behavior)
+  - Confirmed standard-vs-evolution red-effect behavioral locks still enforced (2 regression pairs passing)
+  - All 15 deterministic tests passing; DTO integrity maintained
+  - Mapper contracts protected from silent drift after Phase 3 DTO additions
 
 ## 2026-02-22: Phase 1–3 Test Scope (from Ripley briefing)
 **Status:** Ready to start fixture creation
@@ -69,3 +77,22 @@
 - Standard variant: No special color effects confirmed ✅
 - Evolution variant: Red forced-target behavior preserved ✅
 - Ripley approved; variant compliance automated
+
+## 2026-02-23: Phase 3 Regression Lock Expansion
+**Status:** ✅ Complete
+
+**Deliverable:** Deterministic mapper-focused regression coverage for additive `LobbyStateDto` metadata
+
+**Key Outcomes:**
+- Added mapper regression tests for `RevealedPileTotalsByPlayer` normalization
+- Confirmed standard-vs-evolution red-effect locks still enforced (2 regression pairs passing)
+- Verified all players present with zero-default mapping
+- All 15 backend tests passing (13 previous + 2 new mapper assertions)
+- Variant behavior protected; no cross-variant leakage
+- Mapper contracts validated; DTO integrity maintained
+- Phase 3 regression locks ready for production
+
+## Next Phase QA Recommendations (From Ripley Vision)
+- Add visual regression checklist for card-first surfaces (history cards, prep cards, totals chips, forced-target cue)
+- Run frontend fixture checks for circular/table layouts at desktop/tablet/mobile breakpoints
+- Validate reduced-motion behavior and keyboard/screen-reader flow for animated reveal lane and prep shuffle transition
