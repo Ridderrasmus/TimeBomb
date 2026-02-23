@@ -6,6 +6,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, FormEvent } from "react";
 import "./App.css";
+import { DetailsDrawer } from "./components/DetailsDrawer";
 import { HistoryDrawer } from "./components/HistoryDrawer";
 import { PlayerStatusCards } from "./components/PlayerStatusCards";
 import { RevealedPileTotals } from "./components/RevealedPileTotals";
@@ -171,6 +172,7 @@ function App() {
   const [selectedPendingDecisionColor, setSelectedPendingDecisionColor] =
     useState<WireColor | null>(null);
   const [isHistoryDrawerOpen, setIsHistoryDrawerOpen] = useState(false);
+  const [isDetailsDrawerOpen, setIsDetailsDrawerOpen] = useState(false);
   const hubRef = useRef<HubConnection | null>(null);
 
   const activeLobby = liveLobby;
@@ -1082,7 +1084,7 @@ function App() {
           )}
         </main>
 
-        {activeGame && (
+        {activeGame && activeLobby && (
           <>
             <button
               type="button"
@@ -1094,11 +1096,36 @@ function App() {
               📜
             </button>
 
+            <button
+              type="button"
+              className="details-drawer-toggle"
+              onClick={() => setIsDetailsDrawerOpen(true)}
+              aria-label="Open game details"
+              title="View game details"
+            >
+              ⚙️
+            </button>
+
             <HistoryDrawer
               isOpen={isHistoryDrawerOpen}
               onClose={() => setIsHistoryDrawerOpen(false)}
               wires={activeGame.revealedWires}
               players={displayedPlayers}
+            />
+
+            <DetailsDrawer
+              isOpen={isDetailsDrawerOpen}
+              onClose={() => setIsDetailsDrawerOpen(false)}
+              lobbyName={activeLobby.name}
+              lobbyCode={activeLobby.lobbyCode}
+              creatorName={
+                displayedPlayers.find(
+                  (player) => player.id === activeLobby.createdByPlayerId
+                )?.name ?? "Unknown"
+              }
+              variant={activeLobby.rules.variant}
+              randomizeCardColors={activeLobby.rules.randomizeCardColors}
+              selectedBombColors={activeLobby.rules.selectedBombColors}
             />
           </>
         )}
