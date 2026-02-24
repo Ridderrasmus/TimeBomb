@@ -698,3 +698,35 @@ Ripley:
 4. **Responsive layout stress-testing:** Verify <760px breakpoint with 6-player games and long names
 5. **Performance profiling:** Measure re-render costs for circular layout with CSS animations
 6. **E2E visual regression:** Capture baseline screenshots and validate future changes
+
+---
+
+## 2026-02-24: QA Development Support — Debug Spawn Endpoint
+
+### 2026-02-24T14:00:00Z: Ripley — Debug Spawn Players Endpoint for QA Requirement
+**By:** Ripley (Lead)
+**Status:** Proposed → Approved
+
+**What:** Add a dev/QA-only endpoint that spawns enough debug players to reach the 4-player minimum for smoke tests without manual multi-tab joining.
+
+**Decision:** Implement `POST /api/lobby/{code}/debug/spawn-players` guarded by environment check (Development or QA).
+
+**Rationale:**
+- QA and smoke tests require four players to start a game
+- Manual multi-tab joining is slow and error-prone
+- Provides fast, reliable way to reach the start threshold
+
+**Implications:**
+- Backend gains a non-production endpoint and lobby store helper
+- QA runbook references the endpoint for smoke flow
+- Zero gameplay logic changes; dev-only surface
+- No impact to Standard or Evolution variant behavior
+
+**Acceptance Criteria:**
+- ✅ Endpoint guards by environment (Development/QA only)
+- ✅ Endpoint callable multiple times without side effects
+- ✅ Creates players in debug state (not affecting game outcomes)
+- ✅ QA runbook updated with endpoint usage examples
+- ✅ No breaking changes to existing REST/SignalR contracts
+
+**Verdict:** ✅ APPROVED — Ready for implementation

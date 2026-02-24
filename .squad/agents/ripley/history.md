@@ -65,3 +65,8 @@
 - **Standard-vs-Evolution guards intact:** Red forced-target effect still Evolution-only; assertions for Standard variant null metadata remain in mapper tests. No new variant cross-contamination introduced.
 - **Risk assessment:** Low. All changes are presentation-layer only. No game logic modified. Backend DTO additions (`revealedPileTotalsByPlayer`, `previousActivePlayerId`) are additive and optional fields with fallback handling.
 - **Next slice targets:** Animation polish (smooth wire reveal transitions, pile update animations), turn choreography (active-player highlight sequence, forced-target path animation refinement), accessibility audit (ARIA labels for progress bars and circular layout), responsive layout stress-testing at <760px breakpoint.
+
+### 2026-02-24: Debug Spawn Endpoint for QA
+- **Decision:** Added a dev/QA-only endpoint to quickly reach 4 players for smoke testing: `POST /api/lobby/{code}/debug/spawn-players`.
+- **Implementation:** `LobbyStore.TryAddDebugPlayers` adds enough `Debug Player N` entries to reach the 4-player minimum while respecting the 6-player cap.
+- **Docs:** QA runbook now references the debug spawn endpoint for faster 4-player starts.
