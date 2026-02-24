@@ -1,3 +1,5 @@
+import "./RevealedPileTotals.css";
+
 interface RevealedPileWire {
   revealedFromPlayerId?: string;
   card: {

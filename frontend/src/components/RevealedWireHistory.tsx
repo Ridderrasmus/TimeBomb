@@ -1,5 +1,7 @@
 import { WireVisualCard } from "./WireVisualCard";
 
+import "./RevealedWireHistory.css";
+
 interface RevealedWireHistoryEntry {
   round: number;
   turn: number;

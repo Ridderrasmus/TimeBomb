@@ -3,14 +3,16 @@ import {
   HubConnectionBuilder,
   LogLevel,
 } from "@microsoft/signalr";
-import { useEffect, useRef, useState } from "react";
-import type { CSSProperties, FormEvent } from "react";
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
+import type { FormEvent } from "react";
 import "./App.css";
-import { PlayerStatusCards } from "./components/PlayerStatusCards";
-import { RevealedPileTotals } from "./components/RevealedPileTotals";
-import { RevealedWireHistory } from "./components/RevealedWireHistory";
-import { TurnStateProminence } from "./components/TurnStateProminence";
-import { WireVisualCard } from "./components/WireVisualCard";
+import { ActiveGameUi } from "./components/ActiveGameUi";
+import { GameLobbyUi } from "./components/GameLobbyUi";
+
+const isDevMode = import.meta.env.DEV;
+const DevTestGallery = isDevMode
+  ? lazy(() => import("./TestGallery").then((module) => ({ default: module.TestGallery })))
+  : null;
 
 type LobbyMode = "create" | "join";
 const PLAYER_NAME_STORAGE_KEY = "timebomb.playerName";
@@ -153,6 +155,7 @@ function App() {
     sessionStorage.setItem(PLAYER_ID_STORAGE_KEY, generated);
     return generated;
   });
+  const [showGallery, setShowGallery] = useState(false);
   const [mode, setMode] = useState<LobbyMode>("create");
   const [lobbyName, setLobbyName] = useState("");
   const [lobbyCode, setLobbyCode] = useState("");
@@ -189,12 +192,29 @@ function App() {
   const pendingDecision = activeGame?.pendingDecision ?? null;
   const isRoundPreparation = !!activeGame?.isRoundPreparation;
   const isReadyForRound = !!privateState?.isReadyForRound;
+  const visibleHand = privateState?.visibleHand ?? [];
   const canReveal =
     activeLobby?.state === "InProgress" &&
     isMyTurn &&
     !isRoundPreparation &&
     !pendingDecision &&
     !busy;
+  const cuttablePlayerIds =
+    activeLobby?.state === "InProgress" &&
+    activeGame &&
+    !pendingDecision &&
+    !isRoundPreparation
+      ? displayedPlayers
+          .filter(
+            (player) => player.id !== playerId && player.remainingWireCount > 0,
+          )
+          .filter(
+            (player) =>
+              !activeGame.forcedTargetPlayerIdForNextTurn ||
+              player.id === activeGame.forcedTargetPlayerIdForNextTurn,
+          )
+          .map((player) => player.id)
+      : [];
   const activeTurnPlayerName = activeGame
     ? displayedPlayers.find((player) => player.id === activeGame.activePlayerId)
         ?.name ?? activeGame.activePlayerId
@@ -261,6 +281,16 @@ function App() {
   useEffect(() => {
     sessionStorage.setItem(PLAYER_NAME_STORAGE_KEY, playerName);
   }, [playerName]);
+
+  useEffect(() => {
+    if (!isDevMode) {
+      setShowGallery(false);
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    setShowGallery(params.get("mode") === "gallery");
+  }, []);
 
   useEffect(() => {
     if (!currentLobby) {
@@ -652,18 +682,6 @@ function App() {
             <p className="subtle lobby-meta">Connecting to game channel...</p>
           )}
 
-          {activeLobby?.state === "InProgress" && activeGame && (
-            <TurnStateProminence
-              isMyTurn={isMyTurn}
-              round={activeGame.currentRound}
-              maxRounds={activeGame.maxRounds}
-              turnsTakenInRound={activeGame.turnsTakenInRound}
-              roundTurnLimit={activeGame.roundTurnLimit}
-              activePlayerName={activeTurnPlayerName}
-              isRoundPreparation={isRoundPreparation}
-            />
-          )}
-
           {privateState?.team && (
             <section className="result team-panel">
               <p>
@@ -672,356 +690,53 @@ function App() {
             </section>
           )}
 
-          <section className="result players-panel">
-            <p>
-              <strong>
-                Players ({(activeLobby?.players ?? currentLobby.players).length}
-                ):
-              </strong>
-            </p>
-            <PlayerStatusCards
+          <GameLobbyUi
+            lobbyState={activeLobby?.state ?? currentLobby.state}
+            players={displayedPlayers}
+            currentPlayerId={playerId}
+            rulesDraft={rulesDraft}
+            isCreator={isCreator}
+            busy={busy}
+            hubReady={hubReady}
+            requiredColorCount={requiredColorCount}
+            selectedColorCount={selectedColorCount}
+            allWireColors={ALL_WIRE_COLORS}
+            onRulesDraftChange={(nextDraft) => setRulesDraft(nextDraft)}
+            onToggleSelectedBombColor={toggleSelectedBombColor}
+            onSaveRules={saveRules}
+            onStartGame={startGame}
+          />
+
+          {activeLobby?.state === "InProgress" && activeGame && (
+            <ActiveGameUi
               players={displayedPlayers}
               currentPlayerId={playerId}
-              forcedTargetPlayerId={activeGame?.forcedTargetPlayerIdForNextTurn}
-              showWireCounts={activeLobby?.state === "InProgress"}
-              circularLayout={activeLobby?.state === "InProgress"}
+              game={activeGame}
+              rules={activeLobby.rules}
+              myTeam={privateState?.team ?? null}
+              isMyTurn={isMyTurn}
+              activePlayerName={activeTurnPlayerName}
+              canReveal={canReveal}
+              busy={busy}
+              hubReady={hubReady}
+              visibleHand={visibleHand}
+              isReadyForRound={isReadyForRound}
+              cuttablePlayerIds={cuttablePlayerIds}
+              pendingDecision={pendingDecision}
+              isPendingDecisionRequester={isPendingDecisionRequester}
+              pendingDecisionRequesterName={pendingDecisionRequesterName}
+              selectedPendingDecisionColor={selectedPendingDecisionColor}
+              onSelectPendingDecisionColor={setSelectedPendingDecisionColor}
+              onSubmitPendingDecision={submitPendingDecision}
+              onRevealWire={(targetPlayerId) => {
+                void revealWire(targetPlayerId);
+              }}
+              onMarkRoundReady={markRoundReady}
+              effectCue={effectCue}
+              effectActivePlayerName={effectActivePlayerName}
+              effectRevealedFromPlayerName={effectRevealedFromPlayerName}
+              effectForcedTargetName={effectForcedTargetName}
             />
-          </section>
-
-          {activeLobby?.state === "Lobby" && rulesDraft && (
-            <section className="result rules-panel">
-              <p>
-                <strong>Game rules</strong>
-              </p>
-              <label htmlFor="variant">Variant</label>
-              <select
-                id="variant"
-                value={rulesDraft.variant}
-                onChange={(event) =>
-                  setRulesDraft({
-                    ...rulesDraft,
-                    variant: event.target.value as GameVariant,
-                  })
-                }
-                disabled={!isCreator || busy}
-              >
-                <option value="Standard">Standard</option>
-                <option value="Evolution">Evolution</option>
-              </select>
-
-              <label className="check-row" htmlFor="randomize">
-                <input
-                  id="randomize"
-                  type="checkbox"
-                  checked={rulesDraft.randomizeCardColors}
-                  onChange={(event) =>
-                    setRulesDraft({
-                      ...rulesDraft,
-                      randomizeCardColors: event.target.checked,
-                    })
-                  }
-                  disabled={!isCreator || busy}
-                />
-                Randomize card colour selection
-              </label>
-
-              {!rulesDraft.randomizeCardColors && (
-                <>
-                  <p className="subtle">
-                    Select exactly {requiredColorCount} colors (
-                    {selectedColorCount}/{requiredColorCount})
-                  </p>
-                  <div className="action-row">
-                    {ALL_WIRE_COLORS.map((color) => {
-                      const isSelected = (
-                        rulesDraft.selectedBombColors ?? []
-                      ).includes(color);
-                      const wouldExceed =
-                        !isSelected && selectedColorCount >= requiredColorCount;
-
-                      return (
-                        <button
-                          key={color}
-                          type="button"
-                          className={
-                            isSelected ? "mode-button active" : "mode-button"
-                          }
-                          disabled={!isCreator || busy || wouldExceed}
-                          onClick={() => toggleSelectedBombColor(color)}
-                        >
-                          {color}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
-
-              {isCreator ? (
-                <button
-                  type="button"
-                  className="submit-button"
-                  onClick={saveRules}
-                  disabled={busy || !hubReady}
-                >
-                  Save rules
-                </button>
-              ) : (
-                <p className="subtle">Only the creator can change rules.</p>
-              )}
-            </section>
-          )}
-
-          {activeLobby?.state === "Lobby" && isCreator ? (
-            <button
-              type="button"
-              className="submit-button"
-              onClick={startGame}
-              disabled={busy || !hubReady}
-            >
-              Start game
-            </button>
-          ) : activeLobby?.state === "Lobby" ? (
-            <p className="subtle">Only the creator can start the game.</p>
-          ) : null}
-
-          {activeGame && (
-            <section className="result game-panel">
-              <div className="game-stat-grid">
-                <article className="game-stat-card">
-                  <p className="game-stat-label">Round</p>
-                  <p className="game-stat-value">
-                    {activeGame.currentRound} / {activeGame.maxRounds}
-                  </p>
-                </article>
-                <article className="game-stat-card">
-                  <p className="game-stat-label">Turns this round</p>
-                  <p className="game-stat-value">
-                    {activeGame.turnsTakenInRound} / {activeGame.roundTurnLimit}
-                  </p>
-                </article>
-                <article className="game-stat-card">
-                  <p className="game-stat-label">Defuse revealed</p>
-                  <p className="game-stat-value">
-                    {activeGame.revealedDefuseWireCount}
-                  </p>
-                </article>
-                <article className="game-stat-card">
-                  <p className="game-stat-label">Defused colors</p>
-                  {activeGame.defusedColors.length > 0 ? (
-                    <div className="game-stat-chip-row">
-                      {activeGame.defusedColors.map((color) => (
-                        <span key={color} className="game-stat-chip">
-                          {color}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="game-stat-muted">None yet</p>
-                  )}
-                </article>
-              </div>
-
-              {activeGame.outcome.isComplete ? (
-                <p>
-                  <strong>Winner:</strong> {activeGame.outcome.winner} (
-                  {activeGame.outcome.reason})
-                </p>
-              ) : (
-                <>
-                  {isRoundPreparation ? (
-                    <p>
-                      <strong>Round phase:</strong> Preparation (
-                      {activeGame.readyPlayerIds.length}/
-                      {displayedPlayers.length} ready)
-                    </p>
-                  ) : (
-                    <p>
-                      <strong>Round phase:</strong> Active turn play
-                    </p>
-                  )}
-                  <p>
-                    <strong>Current turn:</strong>{" "}
-                    {(activeLobby?.players ?? []).find(
-                      (player) => player.id === activeGame.activePlayerId,
-                    )?.name ?? activeGame.activePlayerId}
-                  </p>
-                  {activeGame.forcedTargetPlayerIdForNextTurn && (
-                    <p>
-                      <strong>Forced target:</strong>{" "}
-                      {activeGame.forcedTargetPlayerNameForNextTurn ??
-                        displayedPlayers.find(
-                          (player) =>
-                            player.id ===
-                            activeGame.forcedTargetPlayerIdForNextTurn,
-                        )?.name ??
-                        activeGame.forcedTargetPlayerIdForNextTurn}
-                    </p>
-                  )}
-                </>
-              )}
-
-              {effectCue && (
-                <section className="result effect-cue-panel" aria-live="polite">
-                  <p className="effect-cue-kicker">
-                    Effect cue · R{effectCue.round} T{effectCue.turn}
-                  </p>
-                  <p className="effect-cue-text">{effectCue.effect}</p>
-                  <p className="subtle effect-cue-meta">
-                    {effectActivePlayerName} cut {effectRevealedFromPlayerName}
-                  </p>
-                  {effectForcedTargetName && (
-                    <p className="subtle effect-cue-meta">
-                      Forced target: {effectForcedTargetName}
-                    </p>
-                  )}
-                </section>
-              )}
-              <RevealedPileTotals
-                wires={activeGame.revealedWires}
-                players={displayedPlayers}
-                totalsByPlayer={activeGame.revealedPileTotalsByPlayer ?? null}
-              />
-
-              {isRoundPreparation && (
-                <div className="result prep-panel">
-                  <p>
-                    <strong>Your current hand (before shuffle):</strong>
-                  </p>
-                  {(privateState?.visibleHand ?? []).length > 0 ? (
-                    <ul
-                      className={`wire-hand-fan${isReadyForRound ? " is-round-ready" : ""}`}
-                    >
-                      {(privateState?.visibleHand ?? []).map((card, index) => (
-                        <li
-                          key={`${card.kind}-${card.color ?? "none"}-${index}`}
-                          className="wire-hand-card-item"
-                          style={{ "--fan-index": index } as CSSProperties}
-                        >
-                          <WireVisualCard
-                            kind={card.kind}
-                            color={card.color}
-                            subtitle={`Card ${index + 1}`}
-                          />
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="subtle">No cards visible.</p>
-                  )}
-
-                  <button
-                    type="button"
-                    className="submit-button"
-                    disabled={busy || !hubReady || isReadyForRound}
-                    onClick={markRoundReady}
-                  >
-                    {isReadyForRound ? "Ready submitted" : "I'm ready"}
-                  </button>
-                  <p className="subtle">
-                    When everyone is ready, hands are hidden and shuffled
-                    automatically.
-                  </p>
-                </div>
-              )}
-
-              {activeLobby?.state === "InProgress" &&
-                !pendingDecision &&
-                !isRoundPreparation && (
-                  <div className="action-row">
-                    {displayedPlayers
-                      .filter(
-                        (player) =>
-                          player.id !== playerId &&
-                          player.remainingWireCount > 0,
-                      )
-                      .filter(
-                        (player) =>
-                          !activeGame.forcedTargetPlayerIdForNextTurn ||
-                          player.id ===
-                            activeGame.forcedTargetPlayerIdForNextTurn,
-                      )
-                      .map((player) => (
-                        <button
-                          key={player.id}
-                          type="button"
-                          className="mode-button"
-                          disabled={!canReveal}
-                          onClick={() => revealWire(player.id)}
-                        >
-                          Cut {player.name}
-                        </button>
-                      ))}
-                  </div>
-                )}
-
-              {pendingDecision && (
-                <div className="decision-overlay" role="presentation">
-                  <section
-                    className="result decision-panel"
-                    aria-live="assertive"
-                    aria-label="Pending decision"
-                  >
-                    <p className="decision-kicker">Pending decision</p>
-                    <p>
-                      <strong>
-                        {pendingDecision.type === "AssignDefuseColor"
-                          ? "Choose a color to defuse"
-                          : "Choose a defused color to reactivate"}
-                      </strong>
-                    </p>
-                    <p className="subtle">
-                      {isPendingDecisionRequester
-                        ? "Select one color and confirm your choice."
-                        : `Waiting for ${pendingDecisionRequesterName} to confirm.`}
-                    </p>
-                    <div className="action-row decision-color-row">
-                      {pendingDecision.availableColors.map((color) => {
-                        const isSelected = selectedPendingDecisionColor === color;
-
-                        return (
-                          <button
-                            key={color}
-                            type="button"
-                            className={`mode-button decision-color-option${isSelected ? " decision-color-selected active" : ""}`}
-                            disabled={busy || !isPendingDecisionRequester}
-                            onClick={() => setSelectedPendingDecisionColor(color)}
-                          >
-                            {color}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {isPendingDecisionRequester ? (
-                      <>
-                        <p className="subtle decision-selection-status">
-                          {selectedPendingDecisionColor
-                            ? `Selected: ${selectedPendingDecisionColor}`
-                            : "No color selected yet."}
-                        </p>
-                        <button
-                          type="button"
-                          className="submit-button decision-submit"
-                          disabled={busy || !selectedPendingDecisionColor}
-                          onClick={submitPendingDecision}
-                        >
-                          {busy
-                            ? "Submitting..."
-                            : selectedPendingDecisionColor
-                              ? `Confirm ${selectedPendingDecisionColor}`
-                              : "Confirm selection"}
-                        </button>
-                      </>
-                    ) : null}
-                  </section>
-                </div>
-              )}
-
-              <RevealedWireHistory
-                wires={activeGame.revealedWires}
-                players={displayedPlayers}
-              />
-            </section>
           )}
 
             <button
@@ -1039,7 +754,16 @@ function App() {
             </p>
           )}
         </main>
+
       </div>
+    );
+  }
+
+  if (isDevMode && showGallery && DevTestGallery) {
+    return (
+      <Suspense fallback={<div className="app" />}>
+        <DevTestGallery />
+      </Suspense>
     );
   }
 

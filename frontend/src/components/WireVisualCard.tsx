@@ -1,3 +1,5 @@
+import "./WireVisualCard.css";
+
 interface WireVisualCardProps {
   kind: string;
   color?: string | null;

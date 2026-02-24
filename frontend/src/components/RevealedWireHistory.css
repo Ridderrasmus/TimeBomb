@@ -1,0 +1,126 @@
+.revealed-history {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.reveal-lane {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.42rem;
+  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+}
+
+.reveal-lane-item {
+  border-radius: 12px;
+  border: 1px solid var(--border-soft);
+  background: linear-gradient(
+    150deg,
+    rgba(101, 120, 221, 0.2),
+    rgba(69, 88, 176, 0.12)
+  );
+  padding: 0.42rem 0.48rem;
+  display: grid;
+  gap: 0.22rem;
+  animation: revealLaneEnter 220ms ease-out both;
+}
+
+.reveal-lane-item.is-latest {
+  border-color: rgba(171, 188, 255, 0.76);
+  box-shadow: 0 10px 20px rgba(90, 104, 218, 0.26);
+  animation: revealLaneEnter 220ms ease-out both,
+    revealLanePulse 2.2s ease-in-out infinite 220ms;
+}
+
+.reveal-lane-meta {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.wire-history-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.42rem;
+}
+
+.wire-history-item {
+  border-radius: 12px;
+  border: 1px solid var(--border-soft);
+  background: var(--surface-tile);
+  padding: 0.54rem 0.66rem;
+  display: grid;
+  gap: 0.24rem;
+}
+
+.wire-history-item.defuse-reveal {
+  border-color: rgba(132, 214, 170, 0.48);
+}
+
+.wire-history-item.bomb-reveal {
+  border-color: rgba(255, 157, 157, 0.52);
+}
+
+.wire-history-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+}
+
+.wire-history-turn {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+}
+
+.wire-history-meta {
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+}
+
+.wire-history-effect {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+@keyframes revealLaneEnter {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes revealLanePulse {
+  0%,
+  100% {
+    transform: translateY(0);
+    box-shadow: 0 0 0 3px rgba(150, 200, 255, 0.4);
+  }
+  50% {
+    transform: translateY(-1px);
+    box-shadow: 0 0 8px 5px rgba(150, 200, 255, 0.2);
+  }
+}
+
+@media (max-width: 760px) {
+  .reveal-lane {
+    grid-template-columns: 1fr;
+  }
+
+  .wire-history-title {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-lane-item.is-latest {
+    animation: none !important;
+  }
+}

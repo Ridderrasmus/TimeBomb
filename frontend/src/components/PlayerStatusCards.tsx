@@ -1,5 +1,7 @@
 import type { CSSProperties } from "react";
 
+import "./PlayerStatusCards.css";
+
 interface PlayerSummary {
   id: string;
   name: string;
@@ -13,6 +15,8 @@ interface PlayerStatusCardsProps {
   forcedTargetPlayerId?: string | null;
   showWireCounts: boolean;
   circularLayout?: boolean;
+  onPlayerClick?: (playerId: string) => void;
+  clickablePlayerIds?: string[];
 }
 
 export function PlayerStatusCards({
@@ -21,7 +25,10 @@ export function PlayerStatusCards({
   forcedTargetPlayerId,
   showWireCounts,
   circularLayout = false,
+  onPlayerClick,
+  clickablePlayerIds,
 }: PlayerStatusCardsProps) {
+  const clickableSet = new Set(clickablePlayerIds ?? []);
   const useCircularLayout = circularLayout && players.length > 2;
   const activeSeatIndex = useCircularLayout
     ? players.findIndex((player) => player.isActiveTurnPlayer)
@@ -50,6 +57,7 @@ export function PlayerStatusCards({
         const isSelf = player.id === currentPlayerId;
         const isActive = player.isActiveTurnPlayer;
         const isForcedTarget = player.id === forcedTargetPlayerId;
+        const isClickable = !!onPlayerClick && clickableSet.has(player.id);
         const seatStyle = useCircularLayout
           ? ({
               "--seat-index": index,
@@ -59,8 +67,22 @@ export function PlayerStatusCards({
         return (
           <li
             key={player.id}
-            className={`player-status-card${isActive ? " is-active" : ""}${isForcedTarget ? " is-forced" : ""}`}
+            className={`player-status-card${isActive ? " is-active" : ""}${isForcedTarget ? " is-forced" : ""}${onPlayerClick ? " is-actionable" : ""}${isClickable ? " is-clickable" : ""}`}
             style={seatStyle}
+            onClick={isClickable ? () => onPlayerClick(player.id) : undefined}
+            onKeyDown={
+              isClickable
+                ? (event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      onPlayerClick(player.id);
+                    }
+                  }
+                : undefined
+            }
+            role={isClickable ? "button" : undefined}
+            tabIndex={isClickable ? 0 : undefined}
+            aria-disabled={onPlayerClick && !isClickable ? true : undefined}
           >
             {useCircularLayout && isActive && (
               <span className="player-status-turn-token" aria-hidden="true" />

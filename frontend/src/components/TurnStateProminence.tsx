@@ -1,3 +1,5 @@
+import "./TurnStateProminence.css";
+
 interface TurnStateProminenceProps {
   isMyTurn: boolean;
   round: number;
@@ -6,6 +8,7 @@ interface TurnStateProminenceProps {
   roundTurnLimit: number;
   activePlayerName: string;
   isRoundPreparation: boolean;
+  myTeam?: "Sherlock" | "Moriarty" | null;
 }
 
 export function TurnStateProminence({
@@ -16,6 +19,7 @@ export function TurnStateProminence({
   roundTurnLimit,
   activePlayerName,
   isRoundPreparation,
+  myTeam,
 }: TurnStateProminenceProps) {
   const visibleTurn = Math.min(turnsTakenInRound + 1, roundTurnLimit);
 
@@ -29,9 +33,22 @@ export function TurnStateProminence({
       aria-live="polite"
     >
       <p className="turn-state-kicker">{isMyTurn ? "Your move" : "Turn update"}</p>
-      <p className="turn-state-title">
-        {isMyTurn ? "You're up now" : `${activePlayerName} is acting`}
-      </p>
+      <div className="turn-state-title-row">
+        <p className="turn-state-title">
+          {isMyTurn ? "You're up now" : `${activePlayerName} is acting`}
+        </p>
+        {isMyTurn && myTeam && (
+          <span
+            className={`turn-state-team-chip ${
+              myTeam === "Moriarty"
+                ? "turn-state-team-chip-moriarty"
+                : "turn-state-team-chip-sherlock"
+            }`}
+          >
+            {myTeam}
+          </span>
+        )}
+      </div>
       <div className="turn-state-meta">
         <span>
           Round {round}/{maxRounds}

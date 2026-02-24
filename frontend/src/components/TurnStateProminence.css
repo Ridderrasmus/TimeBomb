@@ -1,0 +1,126 @@
+.turn-state-panel {
+  border-radius: 16px;
+  border: 1px solid var(--border-soft);
+  padding: 0.8rem 0.9rem;
+  display: grid;
+  gap: 0.35rem;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+  animation: bannerEnter 280ms cubic-bezier(0.12, 0.4, 0.29, 1.46) both;
+}
+
+.turn-state-panel.turn-state-active {
+  animation: bannerEnter 280ms cubic-bezier(0.12, 0.4, 0.29, 1.46) both,
+    turnPulse 2.2s ease-in-out infinite 280ms;
+}
+
+.turn-state-active {
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent-start), var(--accent-end));
+  box-shadow: 0 10px 24px rgba(83, 81, 213, 0.34);
+}
+
+.turn-state-waiting {
+  background: var(--surface-tile);
+  color: var(--text-secondary);
+}
+
+.turn-state-kicker {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.7rem;
+  opacity: 0.85;
+}
+
+.turn-state-title {
+  font-size: clamp(1rem, 2.3vw, 1.24rem);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.turn-state-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.45rem;
+}
+
+.turn-state-team-chip {
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  padding: 0.12rem 0.56rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.turn-state-team-chip-sherlock {
+  border-color: rgba(132, 177, 255, 0.72);
+  background: linear-gradient(135deg, rgba(95, 152, 255, 0.9), rgba(74, 120, 230, 0.94));
+}
+
+.turn-state-team-chip-moriarty {
+  border-color: rgba(255, 155, 155, 0.72);
+  background: linear-gradient(135deg, rgba(230, 98, 106, 0.92), rgba(187, 73, 90, 0.96));
+}
+
+.turn-state-waiting .turn-state-team-chip {
+  border-color: var(--border-soft);
+  background: rgba(166, 181, 255, 0.12);
+  color: var(--text-secondary);
+}
+
+.turn-state-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.36rem;
+}
+
+.turn-state-meta span {
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.12);
+  padding: 0.12rem 0.52rem;
+  font-size: 0.78rem;
+}
+
+.turn-state-waiting .turn-state-meta span {
+  border-color: var(--border-soft);
+  background: rgba(166, 181, 255, 0.1);
+}
+
+@keyframes turnPulse {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-1px);
+  }
+}
+
+@keyframes bannerEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (max-width: 760px) {
+  .turn-state-meta span {
+    font-size: 0.74rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .turn-state-active {
+    animation: none !important;
+  }
+}
