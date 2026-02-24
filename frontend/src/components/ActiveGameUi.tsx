@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
+import { createPortal } from "react-dom";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import "./ActiveGameUi.css";
 
 import { PlayerStatusCards } from "./PlayerStatusCards";
-import { RevealedPileTotals } from "./RevealedPileTotals";
 import { RevealedWireHistory } from "./RevealedWireHistory";
 import { TurnStateProminence } from "./TurnStateProminence";
 import { WireVisualCard } from "./WireVisualCard";
@@ -61,6 +61,7 @@ interface ActiveGameState {
   forcedTargetPlayerNameForNextTurn?: string | null;
   revealedDefuseWireCount: number;
   defusedColors: WireColor[];
+  selectedBombColors?: WireColor[];
   revealedWires: RevealedWire[];
   revealedPileTotalsByPlayer?: Record<string, number> | null;
   outcome: {
@@ -105,6 +106,7 @@ interface ActiveGameUiProps {
   effectActivePlayerName?: string | null;
   effectRevealedFromPlayerName?: string | null;
   effectForcedTargetName?: string | null;
+  showHandToggleButton?: boolean;
 }
 
 export function ActiveGameUi({
@@ -129,14 +131,12 @@ export function ActiveGameUi({
   onSubmitPendingDecision,
   onRevealWire,
   onMarkRoundReady,
-  effectCue,
-  effectActivePlayerName,
-  effectRevealedFromPlayerName,
-  effectForcedTargetName,
+  showHandToggleButton = true,
 }: ActiveGameUiProps) {
   const [isHandPopupOpen, setIsHandPopupOpen] = useState(false);
   const [isHistoryDrawerOpen, setIsHistoryDrawerOpen] = useState(false);
   const [isRulesDrawerOpen, setIsRulesDrawerOpen] = useState(false);
+  const [isPortalReady, setIsPortalReady] = useState(false);
   const [rulesMarkdown, setRulesMarkdown] = useState<string | null>(null);
   const [rulesMarkdownLoading, setRulesMarkdownLoading] = useState(false);
   const [rulesMarkdownError, setRulesMarkdownError] = useState<string | null>(null);
@@ -144,6 +144,32 @@ export function ActiveGameUi({
   const rulesMarkdownPath = `/rules/${rulesVariantSlug}-game-rules.md`;
 
   const canShowHandPopup = game.isRoundPreparation && visibleHand.length > 0;
+  const leftSidePlayers = players.filter((_, index) => index % 2 === 0);
+  const rightSidePlayers = players.filter((_, index) => index % 2 === 1);
+  const activeColorPiles =
+    game.selectedBombColors && game.selectedBombColors.length > 0
+      ? Array.from(new Set(game.selectedBombColors))
+      : rules.selectedBombColors && rules.selectedBombColors.length > 0
+        ? Array.from(new Set(rules.selectedBombColors))
+        : (["Green", "Orange", "Pink", "Yellow", "Blue", "Red"] as WireColor[]);
+  const drawnByColor = activeColorPiles.reduce<Record<WireColor, number>>(
+    (acc, color) => {
+      acc[color] = game.revealedWires.filter((wire) => wire.card.color === color).length;
+      return acc;
+    },
+    {
+      Green: 0,
+      Orange: 0,
+      Pink: 0,
+      Yellow: 0,
+      Blue: 0,
+      Red: 0,
+    },
+  );
+  const defusePileCount = game.revealedWires.filter(
+    (wire) => wire.card.kind === "Defuse",
+  ).length;
+  const colorPileColumns = activeColorPiles.length <= 4 ? activeColorPiles.length : 3;
 
   useEffect(() => {
     if (!canShowHandPopup) {
@@ -155,9 +181,73 @@ export function ActiveGameUi({
   }, [canShowHandPopup]);
 
   useEffect(() => {
+    setIsPortalReady(true);
+  }, []);
+
+  useEffect(() => {
     setRulesMarkdown(null);
     setRulesMarkdownError(null);
   }, [rulesVariantSlug]);
+
+  const sideDrawerControls = (
+    <>
+      {!isRulesDrawerOpen && (
+        <button
+          type="button"
+          className="mode-button side-drawer-toggle left"
+          onClick={() => setIsRulesDrawerOpen(true)}
+        >
+          Game rules
+        </button>
+      )}
+      {isRulesDrawerOpen && (
+        <aside className="side-drawer-panel left is-open" aria-label="Game rules">
+          <div className="result side-drawer-content">
+            <button
+              type="button"
+              className="mode-button side-drawer-close"
+              onClick={() => setIsRulesDrawerOpen(false)}
+            >
+              Close
+            </button>
+            <div className="rules-markdown" aria-label="Rules markdown">
+              {rulesMarkdownLoading ? (
+                "Loading rules markdown…"
+              ) : rulesMarkdownError ? (
+                rulesMarkdownError
+              ) : (
+                <Markdown remarkPlugins={[remarkGfm]}>{rulesMarkdown ?? ""}</Markdown>
+              )}
+            </div>
+          </div>
+        </aside>
+      )}
+
+      {!isHistoryDrawerOpen && (
+        <button
+          type="button"
+          className="mode-button side-drawer-toggle right"
+          onClick={() => setIsHistoryDrawerOpen(true)}
+        >
+          Card history
+        </button>
+      )}
+      {isHistoryDrawerOpen && (
+        <aside className="side-drawer-panel right is-open" aria-label="Card history">
+          <div className="result side-drawer-content">
+            <button
+              type="button"
+              className="mode-button side-drawer-close"
+              onClick={() => setIsHistoryDrawerOpen(false)}
+            >
+              Close
+            </button>
+            <RevealedWireHistory wires={game.revealedWires} players={players} />
+          </div>
+        </aside>
+      )}
+    </>
+  );
 
   useEffect(() => {
     if (!isRulesDrawerOpen) {
@@ -218,21 +308,89 @@ export function ActiveGameUi({
         <p>
           <strong>Players ({players.length}):</strong>
         </p>
-        <PlayerStatusCards
-          players={players}
-          currentPlayerId={currentPlayerId}
-          forcedTargetPlayerId={game.forcedTargetPlayerIdForNextTurn}
-          showWireCounts={true}
-          circularLayout={true}
-          onPlayerClick={(targetPlayerId) => {
-            if (!canReveal || !cuttablePlayerIds.includes(targetPlayerId)) {
-              return;
-            }
+        <div className="table-board-layout" aria-label="Game table layout">
+          <div className="table-side-column table-side-column-left">
+            <PlayerStatusCards
+              players={leftSidePlayers}
+              currentPlayerId={currentPlayerId}
+              forcedTargetPlayerId={game.forcedTargetPlayerIdForNextTurn}
+              showWireCounts={true}
+              circularLayout={false}
+              onPlayerClick={(targetPlayerId) => {
+                if (!canReveal || !cuttablePlayerIds.includes(targetPlayerId)) {
+                  return;
+                }
 
-            onRevealWire(targetPlayerId);
-          }}
-          clickablePlayerIds={canReveal ? cuttablePlayerIds : []}
-        />
+                onRevealWire(targetPlayerId);
+              }}
+              clickablePlayerIds={canReveal ? cuttablePlayerIds : []}
+            />
+          </div>
+
+          <div className="table-pile-center" aria-label="Card piles">
+            <div
+              className="table-color-piles"
+              style={{ "--pile-columns": colorPileColumns } as CSSProperties}
+            >
+              {activeColorPiles.map((color) => {
+                const isDefused = game.defusedColors.includes(color);
+                return (
+                  <div
+                    key={color}
+                    className={`table-pile-card table-pile-${color.toLowerCase()}`}
+                    title={`${color} pile: ${drawnByColor[color]} cards revealed`}
+                    aria-label={`${color} pile, ${drawnByColor[color]} cards revealed`}
+                  >
+                    {rules.variant === "Evolution" && (
+                      <span
+                        className={`table-pile-evolution-state${isDefused ? " is-defused" : ""}`}
+                        title={
+                          isDefused
+                            ? `${color} is currently defused`
+                            : `${color} is not defused`
+                        }
+                        aria-label={
+                          isDefused
+                            ? `${color} is currently defused`
+                            : `${color} is not defused`
+                        }
+                      >
+                        {isDefused ? "✓" : "○"}
+                      </span>
+                    )}
+                    <span className="table-pile-count">{drawnByColor[color]}</span>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div
+              className="table-pile-card table-pile-defuse"
+              title={`Defuse pile: ${defusePileCount} defuse cards revealed`}
+              aria-label={`Defuse pile, ${defusePileCount} defuse cards revealed`}
+            >
+              <span className="table-pile-count">{defusePileCount}</span>
+            </div>
+          </div>
+
+          <div className="table-side-column table-side-column-right">
+            <PlayerStatusCards
+              players={rightSidePlayers}
+              currentPlayerId={currentPlayerId}
+              forcedTargetPlayerId={game.forcedTargetPlayerIdForNextTurn}
+              showWireCounts={true}
+              circularLayout={false}
+              onPlayerClick={(targetPlayerId) => {
+                if (!canReveal || !cuttablePlayerIds.includes(targetPlayerId)) {
+                  return;
+                }
+
+                onRevealWire(targetPlayerId);
+              }}
+              clickablePlayerIds={canReveal ? cuttablePlayerIds : []}
+            />
+          </div>
+        </div>
 
         {!pendingDecision && !game.isRoundPreparation && (
           <p className="subtle table-action-hint">
@@ -242,7 +400,7 @@ export function ActiveGameUi({
           </p>
         )}
 
-        {canShowHandPopup && (
+        {canShowHandPopup && showHandToggleButton && (
           <div className="players-panel-tools">
             <button
               type="button"
@@ -292,212 +450,71 @@ export function ActiveGameUi({
         )}
       </section>
 
-      <section className="result game-panel">
-        <div className="game-stat-grid">
-          <article className="game-stat-card">
-            <p className="game-stat-label">Round</p>
-            <p className="game-stat-value">
-              {game.currentRound} / {game.maxRounds}
-            </p>
-          </article>
-          <article className="game-stat-card">
-            <p className="game-stat-label">Turns this round</p>
-            <p className="game-stat-value">
-              {game.turnsTakenInRound} / {game.roundTurnLimit}
-            </p>
-          </article>
-          <article className="game-stat-card">
-            <p className="game-stat-label">Defuse revealed</p>
-            <p className="game-stat-value">{game.revealedDefuseWireCount}</p>
-          </article>
-          <article className="game-stat-card">
-            <p className="game-stat-label">Defused colors</p>
-            {game.defusedColors.length > 0 ? (
-              <div className="game-stat-chip-row">
-                {game.defusedColors.map((color) => (
-                  <span key={color} className="game-stat-chip">
-                    {color}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <p className="game-stat-muted">None yet</p>
-            )}
-          </article>
-        </div>
-
-        {game.outcome.isComplete ? (
-          <p>
-            <strong>Winner:</strong> {game.outcome.winner} ({game.outcome.reason})
-          </p>
-        ) : (
-          <>
-            {game.isRoundPreparation ? (
-              <p>
-                <strong>Round phase:</strong> Preparation ({game.readyPlayerIds.length}/
-                {players.length} ready)
-              </p>
-            ) : (
-              <p>
-                <strong>Round phase:</strong> Active turn play
-              </p>
-            )}
+      {pendingDecision && (
+        <div className="decision-overlay" role="presentation">
+          <section
+            className="result decision-panel"
+            aria-live="assertive"
+            aria-label="Pending decision"
+          >
+            <p className="decision-kicker">Pending decision</p>
             <p>
-              <strong>Current turn:</strong> {activePlayerName}
+              <strong>
+                {pendingDecision.type === "AssignDefuseColor"
+                  ? "Choose a color to defuse"
+                  : "Choose a defused color to reactivate"}
+              </strong>
             </p>
-            {game.forcedTargetPlayerIdForNextTurn && (
-              <p>
-                <strong>Forced target:</strong> {game.forcedTargetPlayerNameForNextTurn ??
-                  players.find(
-                    (player) => player.id === game.forcedTargetPlayerIdForNextTurn,
-                  )?.name ??
-                  game.forcedTargetPlayerIdForNextTurn}
-              </p>
-            )}
-          </>
-        )}
-
-        {effectCue && (
-          <section className="result effect-cue-panel" aria-live="polite">
-            <p className="effect-cue-kicker">
-              Effect cue · R{effectCue.round} T{effectCue.turn}
+            <p className="subtle">
+              {isPendingDecisionRequester
+                ? "Select one color and confirm your choice."
+                : `Waiting for ${pendingDecisionRequesterName} to confirm.`}
             </p>
-            <p className="effect-cue-text">{effectCue.effect}</p>
-            <p className="subtle effect-cue-meta">
-              {effectActivePlayerName} cut {effectRevealedFromPlayerName}
-            </p>
-            {effectForcedTargetName && (
-              <p className="subtle effect-cue-meta">Forced target: {effectForcedTargetName}</p>
-            )}
-          </section>
-        )}
+            <div className="action-row decision-color-row">
+              {pendingDecision.availableColors.map((color) => {
+                const isSelected = selectedPendingDecisionColor === color;
 
-        <RevealedPileTotals
-          wires={game.revealedWires}
-          players={players}
-          totalsByPlayer={game.revealedPileTotalsByPlayer ?? null}
-        />
-
-        {pendingDecision && (
-          <div className="decision-overlay" role="presentation">
-            <section
-              className="result decision-panel"
-              aria-live="assertive"
-              aria-label="Pending decision"
-            >
-              <p className="decision-kicker">Pending decision</p>
-              <p>
-                <strong>
-                  {pendingDecision.type === "AssignDefuseColor"
-                    ? "Choose a color to defuse"
-                    : "Choose a defused color to reactivate"}
-                </strong>
-              </p>
-              <p className="subtle">
-                {isPendingDecisionRequester
-                  ? "Select one color and confirm your choice."
-                  : `Waiting for ${pendingDecisionRequesterName} to confirm.`}
-              </p>
-              <div className="action-row decision-color-row">
-                {pendingDecision.availableColors.map((color) => {
-                  const isSelected = selectedPendingDecisionColor === color;
-
-                  return (
-                    <button
-                      key={color}
-                      type="button"
-                      className={`mode-button decision-color-option${isSelected ? " decision-color-selected active" : ""}`}
-                      disabled={busy || !isPendingDecisionRequester}
-                      onClick={() => onSelectPendingDecisionColor(color)}
-                    >
-                      {color}
-                    </button>
-                  );
-                })}
-              </div>
-              {isPendingDecisionRequester ? (
-                <>
-                  <p className="subtle decision-selection-status">
-                    {selectedPendingDecisionColor
-                      ? `Selected: ${selectedPendingDecisionColor}`
-                      : "No color selected yet."}
-                  </p>
+                return (
                   <button
+                    key={color}
                     type="button"
-                    className="submit-button decision-submit"
-                    disabled={busy || !selectedPendingDecisionColor}
-                    onClick={onSubmitPendingDecision}
+                    className={`mode-button decision-color-option${isSelected ? " decision-color-selected active" : ""}`}
+                    disabled={busy || !isPendingDecisionRequester}
+                    onClick={() => onSelectPendingDecisionColor(color)}
                   >
-                    {busy
-                      ? "Submitting..."
-                      : selectedPendingDecisionColor
-                        ? `Confirm ${selectedPendingDecisionColor}`
-                        : "Confirm selection"}
+                    {color}
                   </button>
-                </>
-              ) : null}
-            </section>
-          </div>
-        )}
-      </section>
-
-      {!isRulesDrawerOpen && (
-        <button
-          type="button"
-          className="mode-button side-drawer-toggle left"
-          onClick={() => setIsRulesDrawerOpen(true)}
-        >
-          Game rules
-        </button>
-      )}
-      <aside
-        className={`side-drawer-panel left${isRulesDrawerOpen ? " is-open" : ""}`}
-        aria-label="Game rules"
-      >
-        <div className="result side-drawer-content">
-          <button
-            type="button"
-            className="mode-button side-drawer-close"
-            onClick={() => setIsRulesDrawerOpen(false)}
-          >
-            Close
-          </button>
-          <div className="rules-markdown" aria-label="Rules markdown">
-            {rulesMarkdownLoading ? (
-              "Loading rules markdown…"
-            ) : rulesMarkdownError ? (
-              rulesMarkdownError
-            ) : (
-              <Markdown remarkPlugins={[remarkGfm]}>{rulesMarkdown ?? ""}</Markdown>
-            )}
-          </div>
+                );
+              })}
+            </div>
+            {isPendingDecisionRequester ? (
+              <>
+                <p className="subtle decision-selection-status">
+                  {selectedPendingDecisionColor
+                    ? `Selected: ${selectedPendingDecisionColor}`
+                    : "No color selected yet."}
+                </p>
+                <button
+                  type="button"
+                  className="submit-button decision-submit"
+                  disabled={busy || !selectedPendingDecisionColor}
+                  onClick={onSubmitPendingDecision}
+                >
+                  {busy
+                    ? "Submitting..."
+                    : selectedPendingDecisionColor
+                      ? `Confirm ${selectedPendingDecisionColor}`
+                      : "Confirm selection"}
+                </button>
+              </>
+            ) : null}
+          </section>
         </div>
-      </aside>
-
-      {!isHistoryDrawerOpen && (
-        <button
-          type="button"
-          className="mode-button side-drawer-toggle right"
-          onClick={() => setIsHistoryDrawerOpen(true)}
-        >
-          Card history
-        </button>
       )}
-      <aside
-        className={`side-drawer-panel right${isHistoryDrawerOpen ? " is-open" : ""}`}
-        aria-label="Card history"
-      >
-        <div className="result side-drawer-content">
-          <button
-            type="button"
-            className="mode-button side-drawer-close"
-            onClick={() => setIsHistoryDrawerOpen(false)}
-          >
-            Close
-          </button>
-          <RevealedWireHistory wires={game.revealedWires} players={players} />
-        </div>
-      </aside>
+
+      {isPortalReady
+        ? createPortal(sideDrawerControls, document.body)
+        : sideDrawerControls}
     </>
   );
 }

@@ -64,32 +64,32 @@
 
 .wire-color-green .wire-visual-swatch,
 .wire-color-green.pile-color-dot {
-  background: #7ee28f;
+  background: var(--wire-color-green);
 }
 
 .wire-color-orange .wire-visual-swatch,
 .wire-color-orange.pile-color-dot {
-  background: #ffb268;
+  background: var(--wire-color-orange);
 }
 
 .wire-color-pink .wire-visual-swatch,
 .wire-color-pink.pile-color-dot {
-  background: #ff7dc1;
+  background: var(--wire-color-pink);
 }
 
 .wire-color-yellow .wire-visual-swatch,
 .wire-color-yellow.pile-color-dot {
-  background: #ffe06f;
+  background: var(--wire-color-yellow);
 }
 
 .wire-color-blue .wire-visual-swatch,
 .wire-color-blue.pile-color-dot {
-  background: #7ac9ff;
+  background: var(--wire-color-blue);
 }
 
 .wire-color-red .wire-visual-swatch,
 .wire-color-red.pile-color-dot {
-  background: #ff7d7d;
+  background: var(--wire-color-red);
 }
 
 .wire-color-none .wire-visual-swatch {

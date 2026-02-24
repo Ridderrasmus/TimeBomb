@@ -15,6 +15,12 @@
   --error: #ffb8b8;
   --error-bg: rgba(96, 34, 48, 0.45);
   --error-border: rgba(255, 147, 171, 0.6);
+  --wire-color-green: #28d15f;
+  --wire-color-orange: #ff7a1a;
+  --wire-color-pink: #ff53ea;
+  --wire-color-yellow: #ffd400;
+  --wire-color-blue: #20c6ff;
+  --wire-color-red: #d2203e;
 }
 
 @media (prefers-color-scheme: light) {
@@ -78,8 +84,57 @@
   align-items: start;
 }
 
-.lobby-card > h1 {
+.lobby-card.in-progress-layout {
+  width: min(1450px, calc(100vw - 1.8rem));
+  max-width: none;
+  padding: 0.2rem;
+}
+
+.lobby-card.in-progress-layout > .players-panel {
   grid-column: 1 / -1;
+}
+
+.lobby-card > h1,
+.lobby-card > .lobby-header-row {
+  grid-column: 1 / -1;
+}
+
+.lobby-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.lobby-header-row h1 {
+  margin: 0;
+}
+
+.lobby-debug-button {
+  width: fit-content;
+  max-width: calc((100% - 0.85rem) / 2);
+  min-width: 0;
+  padding: 0.5rem 0.7rem;
+  white-space: nowrap;
+  font-size: 0.84rem;
+  border-radius: 9px;
+  border: 1px solid var(--border-soft);
+  background: var(--button-muted-bg);
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: 600;
+  transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+}
+
+.lobby-debug-button:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+
+.lobby-debug-button:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-color: transparent;
 }
 
 .lobby-meta {
@@ -95,12 +150,39 @@
   color: var(--text-primary);
 }
 
+.lobby-code-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
+.lobby-code-meta > p {
+  margin: 0;
+}
+
+.lobby-code-meta .lobby-copy-button {
+  width: 2.1rem;
+  min-width: 2.1rem;
+  height: 2.1rem;
+  flex: 0 0 2.1rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+}
+
+.lobby-code-meta .lobby-copy-button svg {
+  display: block;
+}
+
 .lobby-card > .turn-banner,
 .lobby-card > .turn-state-panel,
 .lobby-card > .error,
 .lobby-card > .leave-button,
 .lobby-card > .submit-button,
-.lobby-card > .game-panel {
+.lobby-card > .decision-overlay {
   grid-column: 1 / -1;
 }
 
@@ -310,6 +392,25 @@ button:disabled {
   .action-row .mode-button {
     flex: 1 1 44%;
     min-width: 0;
+  }
+
+  .lobby-code-meta {
+    flex-wrap: wrap;
+    align-items: stretch;
+  }
+
+  .lobby-header-row {
+    flex-wrap: wrap;
+  }
+
+  .lobby-debug-button {
+    max-width: 100%;
+  }
+
+  .lobby-code-meta .lobby-copy-button {
+    width: 2.1rem;
+    min-width: 2.1rem;
+    flex: 0 0 2.1rem;
   }
 
   .lobby-card > .leave-button,

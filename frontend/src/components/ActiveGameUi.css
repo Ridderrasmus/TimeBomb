@@ -7,6 +7,119 @@
   font-size: 0.82rem;
 }
 
+.table-board-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(360px, 0.9fr) minmax(220px, 1fr);
+  gap: 1rem;
+  align-items: center;
+}
+
+.table-side-column .player-status-grid {
+  grid-template-columns: 1fr;
+}
+
+.table-pile-center {
+  display: grid;
+  justify-items: center;
+  gap: 1rem;
+}
+
+.table-color-piles {
+  --pile-columns: 3;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+  width: min(100%, 420px);
+}
+
+.table-color-piles .table-pile-card {
+  flex: 0 0
+    calc(
+      (100% - ((var(--pile-columns) - 1) * 0.75rem)) / var(--pile-columns)
+    );
+}
+
+.table-pile-card {
+  position: relative;
+  min-height: 112px;
+  border-radius: 0;
+  border: 3px solid var(--border-strong);
+  background: transparent;
+  display: grid;
+  place-items: center;
+  color: var(--text-primary);
+  transition: transform 140ms ease, filter 140ms ease;
+}
+
+.table-pile-card:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.06);
+}
+
+.table-pile-count {
+  font-size: 1.9rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.table-pile-green {
+  border-color: var(--wire-color-green);
+  color: var(--wire-color-green);
+}
+
+.table-pile-orange {
+  border-color: var(--wire-color-orange);
+  color: var(--wire-color-orange);
+}
+
+.table-pile-pink {
+  border-color: var(--wire-color-pink);
+  color: var(--wire-color-pink);
+}
+
+.table-pile-yellow {
+  border-color: var(--wire-color-yellow);
+  color: var(--wire-color-yellow);
+}
+
+.table-pile-blue {
+  border-color: var(--wire-color-blue);
+  color: var(--wire-color-blue);
+}
+
+.table-pile-red {
+  border-color: var(--wire-color-red);
+  color: var(--wire-color-red);
+}
+
+.table-pile-defuse {
+  width: min(320px, 100%);
+  min-height: 84px;
+  border-color: #000;
+  color: #000;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.table-pile-evolution-state {
+  position: absolute;
+  top: 0.42rem;
+  right: 0.42rem;
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  display: grid;
+  place-items: center;
+  font-size: 0.74rem;
+  line-height: 1;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.table-pile-evolution-state.is-defused {
+  background: rgba(255, 255, 255, 0.22);
+}
+
 .players-panel-tools {
   display: flex;
   justify-content: flex-end;
@@ -18,18 +131,18 @@
 }
 
 .table-hand-popup {
-  position: absolute;
-  inset: 3.2rem 0.8rem auto;
+  position: relative;
+  margin-top: 0.2rem;
   display: flex;
   justify-content: center;
-  pointer-events: none;
-  z-index: 3;
+  pointer-events: auto;
+  z-index: 1;
 }
 
 .table-hand-popup-card {
-  width: min(820px, 100%);
+  width: min(640px, 100%);
+  max-width: 100%;
   box-shadow: 0 16px 32px rgba(11, 18, 45, 0.5);
-  pointer-events: auto;
 }
 
 .mode-button.side-drawer-toggle {
@@ -348,6 +461,18 @@
 }
 
 @media (max-width: 760px) {
+  .table-board-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .table-color-piles {
+    width: 100%;
+  }
+
+  .table-side-column {
+    width: 100%;
+  }
+
   .game-stat-grid {
     grid-template-columns: 1fr 1fr;
   }

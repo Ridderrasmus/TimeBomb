@@ -1,7 +1,7 @@
 import { useState } from "react";
 import "./TestGallery.css";
 import { ActiveGameUi } from "./components/ActiveGameUi";
-import { GameLobbyUi } from "./components/GameLobbyUi";
+import { LobbyScreen } from "./components/LobbyScreen";
 import { WireVisualCard } from "./components/WireVisualCard";
 import { TurnStateProminence } from "./components/TurnStateProminence";
 import { PlayerStatusCards } from "./components/PlayerStatusCards";
@@ -10,6 +10,7 @@ import { RevealedWireHistory } from "./components/RevealedWireHistory";
 type WireColor = "Green" | "Orange" | "Pink" | "Yellow" | "Blue" | "Red";
 type WireKind = "Defuse" | "Bomb";
 type GameVariant = "Standard" | "Evolution";
+type LobbyStateName = "Lobby" | "InProgress" | "Completed";
 
 const ALL_WIRE_COLORS: WireColor[] = [
   "Green",
@@ -190,14 +191,20 @@ function FullGameShowcase() {
         effectActivePlayerName="Alice"
         effectRevealedFromPlayerName="Bob"
         effectForcedTargetName={`Charlie${lastCutTargetName ? ` · last cut ${lastCutTargetName}` : ""}`}
+        showHandToggleButton={true}
       />
     </div>
   );
 }
 
 function LobbyShowcase() {
-  const players = generateMockPlayers(6);
   const [isCreator, setIsCreator] = useState(true);
+  const [hubReady, setHubReady] = useState(true);
+  const [playerCount, setPlayerCount] = useState<1 | 4 | 6>(6);
+  const [lobbyState, setLobbyState] = useState<LobbyStateName>("Lobby");
+  const [myTeam, setMyTeam] = useState<"Sherlock" | "Moriarty" | null>(null);
+  const players = generateMockPlayers(playerCount);
+  const creatorName = players[0]?.name ?? "Unknown";
   const [rulesDraft, setRulesDraft] = useState<{
     variant: GameVariant;
     randomizeCardColors: boolean;
@@ -229,16 +236,68 @@ function LobbyShowcase() {
           />
           You are the lobby creator
         </label>
+        <label className="check-row" htmlFor="lobby-scene-hub-ready">
+          <input
+            id="lobby-scene-hub-ready"
+            type="checkbox"
+            checked={hubReady}
+            onChange={(event) => setHubReady(event.target.checked)}
+          />
+          Hub connected
+        </label>
+        <label>
+          Player count:
+          <select
+            value={playerCount}
+            onChange={(event) => setPlayerCount(Number(event.target.value) as 1 | 4 | 6)}
+          >
+            <option value={1}>1 player</option>
+            <option value={4}>4 players</option>
+            <option value={6}>6 players</option>
+          </select>
+        </label>
+        <label>
+          Lobby state:
+          <select
+            value={lobbyState}
+            onChange={(event) => setLobbyState(event.target.value as LobbyStateName)}
+          >
+            <option value="Lobby">Lobby</option>
+            <option value="InProgress">InProgress</option>
+            <option value="Completed">Completed</option>
+          </select>
+        </label>
+        <label>
+          Team:
+          <select
+            value={myTeam ?? "none"}
+            onChange={(event) =>
+              setMyTeam(
+                event.target.value === "none"
+                  ? null
+                  : (event.target.value as "Sherlock" | "Moriarty"),
+              )
+            }
+          >
+            <option value="none">None</option>
+            <option value="Sherlock">Sherlock</option>
+            <option value="Moriarty">Moriarty</option>
+          </select>
+        </label>
       </div>
 
-      <GameLobbyUi
-        lobbyState="Lobby"
+      <LobbyScreen
+        lobbyName="Gallery Lobby"
+        lobbyCode="MOCK42"
+        lobbyState={lobbyState}
+        creatorName={creatorName}
         players={players}
         currentPlayerId="p1"
         rulesDraft={rulesDraft}
         isCreator={isCreator}
         busy={false}
-        hubReady={true}
+        hubReady={hubReady}
+        myTeam={myTeam}
         requiredColorCount={requiredColorCount}
         selectedColorCount={selectedColorCount}
         allWireColors={ALL_WIRE_COLORS}
@@ -257,8 +316,14 @@ function LobbyShowcase() {
             selectedBombColors: Array.from(current),
           });
         }}
-        onSaveRules={() => setMockActionMessage("Mock action: Save rules clicked")}
         onStartGame={() => setMockActionMessage("Mock action: Start game clicked")}
+        onLeaveLobby={() => setMockActionMessage("Mock action: Leave lobby clicked")}
+        showDebugSpawnButton={isCreator && lobbyState === "Lobby"}
+        onDebugSpawnPlayers={() =>
+          setMockActionMessage("Mock action: Add debug users clicked")
+        }
+        isInProgressLayout={lobbyState === "InProgress"}
+        error={null}
       />
 
       {mockActionMessage && <p className="subtle">{mockActionMessage}</p>}

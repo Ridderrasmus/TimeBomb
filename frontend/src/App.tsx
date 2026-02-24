@@ -7,7 +7,7 @@ import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import "./App.css";
 import { ActiveGameUi } from "./components/ActiveGameUi";
-import { GameLobbyUi } from "./components/GameLobbyUi";
+import { LobbyScreen } from "./components/LobbyScreen";
 
 const isDevMode = import.meta.env.DEV;
 const DevTestGallery = isDevMode
@@ -260,6 +260,12 @@ function App() {
           (player) => player.id === effectCue.forcedTargetPlayerId,
         )?.name ?? effectCue.forcedTargetPlayerId
       : null;
+  const creatorName =
+    displayedPlayers.find(
+      (player) =>
+        player.id ===
+        (activeLobby?.createdByPlayerId ?? currentLobby?.createdByPlayerId),
+    )?.name ?? "Unknown";
 
   const refreshPrivateState = async (lobbyCode: string) => {
     if (!hubRef.current) {
@@ -283,13 +289,15 @@ function App() {
   }, [playerName]);
 
   useEffect(() => {
-    if (!isDevMode) {
-      setShowGallery(false);
-      return;
+    const params = new URLSearchParams(window.location.search);
+    const joinLobbyCode = params.get("join")?.trim();
+
+    if (joinLobbyCode) {
+      setMode("join");
+      setLobbyCode(joinLobbyCode.toUpperCase());
     }
 
-    const params = new URLSearchParams(window.location.search);
-    setShowGallery(params.get("mode") === "gallery");
+    setShowGallery(isDevMode && params.get("mode") === "gallery");
   }, []);
 
   useEffect(() => {
@@ -440,18 +448,29 @@ function App() {
     }
   };
 
-  const saveRules = async () => {
-    if (!currentLobby || !rulesDraft || !isCreator) {
+  const saveRules = async (
+    draftToSave: {
+      variant: GameVariant;
+      randomizeCardColors: boolean;
+      selectedBombColors?: WireColor[] | null;
+    },
+    silentIncompleteSelection = false,
+  ) => {
+    if (!currentLobby || !isCreator) {
       return;
     }
 
+    const draftSelectedCount = draftToSave.selectedBombColors?.length ?? 0;
+
     if (
-      !rulesDraft.randomizeCardColors &&
-      selectedColorCount !== requiredColorCount
+      !draftToSave.randomizeCardColors &&
+      draftSelectedCount !== requiredColorCount
     ) {
-      setError(
-        `Select exactly ${requiredColorCount} colors when randomization is disabled.`,
-      );
+      if (!silentIncompleteSelection) {
+        setError(
+          `Select exactly ${requiredColorCount} colors when randomization is disabled.`,
+        );
+      }
       return;
     }
 
@@ -465,9 +484,9 @@ function App() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             playerId,
-            variant: rulesDraft.variant,
-            randomizeCardColors: rulesDraft.randomizeCardColors,
-            selectedBombColors: rulesDraft.selectedBombColors,
+            variant: draftToSave.variant,
+            randomizeCardColors: draftToSave.randomizeCardColors,
+            selectedBombColors: draftToSave.selectedBombColors,
           }),
         },
       );
@@ -505,10 +524,13 @@ function App() {
       current.add(color);
     }
 
-    setRulesDraft({
+    const nextDraft = {
       ...rulesDraft,
       selectedBombColors: Array.from(current),
-    });
+    };
+
+    setRulesDraft(nextDraft);
+    void saveRules(nextDraft, true);
   };
 
   const startGame = async () => {
@@ -527,6 +549,39 @@ function App() {
       await refreshPrivateState(currentLobby.lobbyCode);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to start game.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const spawnDebugPlayers = async () => {
+    if (!currentLobby || !isCreator || !isDevMode) {
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        `/api/lobby/${currentLobby.lobbyCode}/debug/spawn-players`,
+        {
+          method: "POST",
+        },
+      );
+
+      if (!response.ok) {
+        const problem = await response.json().catch(() => null);
+        const detail =
+          typeof problem?.detail === "string"
+            ? problem.detail
+            : `Request failed with status ${response.status}`;
+        throw new Error(detail);
+      }
+
+      await hubRef.current?.invoke("RequestLobbyState", currentLobby.lobbyCode);
+      await refreshPrivateState(currentLobby.lobbyCode);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to add debug users.");
     } finally {
       setBusy(false);
     }
@@ -660,100 +715,67 @@ function App() {
   if (currentLobby) {
     return (
       <div className="app">
-        <main className="card lobby-card" aria-label="Lobby screen">
-          <h1>{activeLobby?.name ?? currentLobby.name}</h1>
-          <p className="subtle lobby-meta">
-            <strong>Lobby code:</strong> {currentLobby.lobbyCode}
-          </p>
-          <p className="subtle lobby-meta">
-            <strong>State:</strong> {activeLobby?.state ?? currentLobby.state}
-          </p>
-          <p className="subtle lobby-meta">
-            <strong>Creator:</strong>{" "}
-            {displayedPlayers.find(
-              (player) =>
-                player.id ===
-                (activeLobby?.createdByPlayerId ??
-                  currentLobby.createdByPlayerId),
-            )?.name ?? "Unknown"}
-          </p>
-
-          {!hubReady && (
-            <p className="subtle lobby-meta">Connecting to game channel...</p>
-          )}
-
-          {privateState?.team && (
-            <section className="result team-panel">
-              <p>
-                <strong>Your team:</strong> {privateState.team}
-              </p>
-            </section>
-          )}
-
-          <GameLobbyUi
-            lobbyState={activeLobby?.state ?? currentLobby.state}
-            players={displayedPlayers}
-            currentPlayerId={playerId}
-            rulesDraft={rulesDraft}
-            isCreator={isCreator}
-            busy={busy}
-            hubReady={hubReady}
-            requiredColorCount={requiredColorCount}
-            selectedColorCount={selectedColorCount}
-            allWireColors={ALL_WIRE_COLORS}
-            onRulesDraftChange={(nextDraft) => setRulesDraft(nextDraft)}
-            onToggleSelectedBombColor={toggleSelectedBombColor}
-            onSaveRules={saveRules}
-            onStartGame={startGame}
-          />
-
-          {activeLobby?.state === "InProgress" && activeGame && (
-            <ActiveGameUi
-              players={displayedPlayers}
-              currentPlayerId={playerId}
-              game={activeGame}
-              rules={activeLobby.rules}
-              myTeam={privateState?.team ?? null}
-              isMyTurn={isMyTurn}
-              activePlayerName={activeTurnPlayerName}
-              canReveal={canReveal}
-              busy={busy}
-              hubReady={hubReady}
-              visibleHand={visibleHand}
-              isReadyForRound={isReadyForRound}
-              cuttablePlayerIds={cuttablePlayerIds}
-              pendingDecision={pendingDecision}
-              isPendingDecisionRequester={isPendingDecisionRequester}
-              pendingDecisionRequesterName={pendingDecisionRequesterName}
-              selectedPendingDecisionColor={selectedPendingDecisionColor}
-              onSelectPendingDecisionColor={setSelectedPendingDecisionColor}
-              onSubmitPendingDecision={submitPendingDecision}
-              onRevealWire={(targetPlayerId) => {
-                void revealWire(targetPlayerId);
-              }}
-              onMarkRoundReady={markRoundReady}
-              effectCue={effectCue}
-              effectActivePlayerName={effectActivePlayerName}
-              effectRevealedFromPlayerName={effectRevealedFromPlayerName}
-              effectForcedTargetName={effectForcedTargetName}
-            />
-          )}
-
-            <button
-              type="button"
-              className="mode-button leave-button"
-              onClick={leaveLobby}
-              disabled={busy}
-            >
-            Leave lobby
-          </button>
-
-          {error && (
-            <p className="error" role="alert">
-              {error}
-            </p>
-          )}
-        </main>
+        <LobbyScreen
+          lobbyName={activeLobby?.name ?? currentLobby.name}
+          lobbyCode={currentLobby.lobbyCode}
+          lobbyState={activeLobby?.state ?? currentLobby.state}
+          creatorName={creatorName}
+          players={displayedPlayers}
+          currentPlayerId={playerId}
+          rulesDraft={rulesDraft}
+          isCreator={isCreator}
+          busy={busy}
+          hubReady={hubReady}
+          myTeam={privateState?.team ?? null}
+          requiredColorCount={requiredColorCount}
+          selectedColorCount={selectedColorCount}
+          allWireColors={ALL_WIRE_COLORS}
+          onRulesDraftChange={(nextDraft) => {
+            setRulesDraft(nextDraft);
+            void saveRules(nextDraft, true);
+          }}
+          onToggleSelectedBombColor={toggleSelectedBombColor}
+          onStartGame={startGame}
+          onLeaveLobby={leaveLobby}
+          showDebugSpawnButton={isDevMode && isCreator && (activeLobby?.state ?? currentLobby.state) === "Lobby"}
+          onDebugSpawnPlayers={spawnDebugPlayers}
+          isInProgressLayout={(activeLobby?.state ?? currentLobby.state) === "InProgress"}
+          error={error}
+          inProgressContent={
+            activeLobby?.state === "InProgress" && activeGame ? (
+              <ActiveGameUi
+                players={displayedPlayers}
+                currentPlayerId={playerId}
+                game={activeGame}
+                rules={activeLobby.rules}
+                myTeam={privateState?.team ?? null}
+                isMyTurn={isMyTurn}
+                activePlayerName={activeTurnPlayerName}
+                canReveal={canReveal}
+                busy={busy}
+                hubReady={hubReady}
+                visibleHand={visibleHand}
+                isReadyForRound={isReadyForRound}
+                cuttablePlayerIds={cuttablePlayerIds}
+                pendingDecision={pendingDecision}
+                isPendingDecisionRequester={isPendingDecisionRequester}
+                pendingDecisionRequesterName={pendingDecisionRequesterName}
+                selectedPendingDecisionColor={selectedPendingDecisionColor}
+                onSelectPendingDecisionColor={setSelectedPendingDecisionColor}
+                onSubmitPendingDecision={submitPendingDecision}
+                onRevealWire={(targetPlayerId) => {
+                  void revealWire(targetPlayerId);
+                }}
+                onMarkRoundReady={markRoundReady}
+                effectCue={effectCue}
+                effectActivePlayerName={effectActivePlayerName}
+                effectRevealedFromPlayerName={effectRevealedFromPlayerName}
+                effectForcedTargetName={effectForcedTargetName}
+                showHandToggleButton={false}
+              />
+            ) : null
+          }
+        />
 
       </div>
     );

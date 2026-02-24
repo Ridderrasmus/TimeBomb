@@ -1,16 +1,18 @@
 import { PlayerStatusCards } from "./PlayerStatusCards";
 
-type GameVariant = "Standard" | "Evolution";
-type LobbyStateName = "Lobby" | "InProgress" | "Completed";
-type WireColor = "Green" | "Orange" | "Pink" | "Yellow" | "Blue" | "Red";
+import { useState } from "react";
 
-interface RulesDraft {
+type GameVariant = "Standard" | "Evolution";
+export type LobbyStateName = "Lobby" | "InProgress" | "Completed";
+export type WireColor = "Green" | "Orange" | "Pink" | "Yellow" | "Blue" | "Red";
+
+export interface RulesDraft {
   variant: GameVariant;
   randomizeCardColors: boolean;
   selectedBombColors?: WireColor[] | null;
 }
 
-interface PlayerSummary {
+export interface PlayerSummary {
   id: string;
   name: string;
   remainingWireCount: number;
@@ -30,7 +32,6 @@ interface GameLobbyUiProps {
   allWireColors: WireColor[];
   onRulesDraftChange: (nextDraft: RulesDraft) => void;
   onToggleSelectedBombColor: (color: WireColor) => void;
-  onSaveRules: () => void;
   onStartGame: () => void;
 }
 
@@ -47,9 +48,10 @@ export function GameLobbyUi({
   allWireColors,
   onRulesDraftChange,
   onToggleSelectedBombColor,
-  onSaveRules,
   onStartGame,
 }: GameLobbyUiProps) {
+  const [variantDisclaimer, setVariantDisclaimer] = useState<string | null>(null);
+
   return (
     <>
       {lobbyState !== "InProgress" && (
@@ -75,17 +77,33 @@ export function GameLobbyUi({
           <select
             id="variant"
             value={rulesDraft.variant}
-            onChange={(event) =>
+            onChange={(event) => {
+              const selectedVariant = event.target.value as GameVariant;
+
+              if (selectedVariant === "Evolution") {
+                setVariantDisclaimer(
+                  "Evolution variant is currently under development.",
+                );
+                onRulesDraftChange({
+                  ...rulesDraft,
+                  variant: "Standard",
+                });
+                return;
+              }
+
+              setVariantDisclaimer(null);
               onRulesDraftChange({
                 ...rulesDraft,
-                variant: event.target.value as GameVariant,
-              })
-            }
+                variant: selectedVariant,
+              });
+            }}
             disabled={!isCreator || busy}
           >
             <option value="Standard">Standard</option>
             <option value="Evolution">Evolution</option>
           </select>
+
+          {variantDisclaimer && <p className="subtle">{variantDisclaimer}</p>}
 
           <label className="check-row" htmlFor="randomize">
             <input
@@ -131,18 +149,7 @@ export function GameLobbyUi({
             </>
           )}
 
-          {isCreator ? (
-            <button
-              type="button"
-              className="submit-button"
-              onClick={onSaveRules}
-              disabled={busy || !hubReady}
-            >
-              Save rules
-            </button>
-          ) : (
-            <p className="subtle">Only the creator can change rules.</p>
-          )}
+        
         </section>
       )}
 
