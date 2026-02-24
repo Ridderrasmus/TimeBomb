@@ -10,7 +10,7 @@ var webfrontend = builder.AddViteApp("webfrontend", "../frontend")
 
 server.PublishWithContainerFiles(webfrontend, "wwwroot");
 
-var devtunnel = builder.AddDevTunnel("webdevtunnel").WithReference(webfrontend).WithAnonymousAccess();
+//var devtunnel = builder.AddDevTunnel("webdevtunnel").WithReference(webfrontend).WithAnonymousAccess();
 
 
 

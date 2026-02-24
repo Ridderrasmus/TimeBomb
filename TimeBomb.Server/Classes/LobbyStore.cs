@@ -121,14 +121,22 @@ public class LobbyStore
                 return false;
             }
 
+            var remainingSlots = MaxPlayers - lobby.Players.Count;
+            var neededPlayers = MinPlayers - lobby.Players.Count;
+            
+            // Check if lobby is full before checking if it has enough players
+            if (remainingSlots <= 0)
+            {
+                error = "Lobby is full.";
+                return false;
+            }
+
             if (lobby.Players.Count >= MinPlayers)
             {
                 error = "Lobby already has enough players to start.";
                 return false;
             }
 
-            var remainingSlots = MaxPlayers - lobby.Players.Count;
-            var neededPlayers = MinPlayers - lobby.Players.Count;
             var playersToAdd = Math.Min(neededPlayers, remainingSlots);
             if (playersToAdd <= 0)
             {
