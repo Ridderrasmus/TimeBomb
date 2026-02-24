@@ -3,6 +3,7 @@ using TimeBomb.Server.Classes;
 namespace TimeBomb.Server.Hubs;
 
 public sealed record LobbyStateDto(
+    int Version,
     string LobbyCode,
     string Name,
     GameState State,
@@ -61,15 +62,19 @@ public sealed record RecentEffectCueDto(
 
 public static class LobbyStateMapper
 {
+    public const int SchemaVersion = 1;
+
     public static LobbyStateDto ToDto(GameLobby lobby)
     {
         var game = lobby.ActiveGame;
+        var forcedTargetPlayerIdForNextTurn = game is null ? null : NormalizeNullableValue(game.ForcedTargetPlayerIdForNextTurn);
         var forcedTargetPlayerNameForNextTurn = game is null ? null : ResolveForcedTargetPlayerNameForNextTurn(game);
         var recentEffectCue = game is null ? null : ResolveRecentEffectCue(game);
         var revealedPileTotalsByPlayer = game is null ? null : ResolveRevealedPileTotalsByPlayer(game);
         var previousActivePlayerId = game is null ? null : ResolvePreviousActivePlayerId(game);
 
         return new LobbyStateDto(
+            SchemaVersion,
             lobby.LobbyCode,
             lobby.Name,
             lobby.CurrentState,
@@ -97,7 +102,7 @@ public static class LobbyStateMapper
                     game.GetActivePlayerId(),
                     game.IsRoundPreparation,
                     game.ReadyPlayerIds,
-                    game.ForcedTargetPlayerIdForNextTurn,
+                    forcedTargetPlayerIdForNextTurn,
                     game.RevealedDefuseWireCount,
                     new Dictionary<WireColor, int>(game.RevealedBombsByColor),
                     game.DefusedColors.ToList(),
@@ -159,13 +164,18 @@ public static class LobbyStateMapper
             recentEffectWire.Effect,
             recentEffectWire.ActivePlayerId,
             recentEffectWire.RevealedFromPlayerId,
-            recentEffectWire.ForcedTargetPlayerId,
-            recentEffectWire.ForcedTargetPlayerName);
+            NormalizeNullableValue(recentEffectWire.ForcedTargetPlayerId),
+            NormalizeNullableValue(recentEffectWire.ForcedTargetPlayerName));
     }
 
     private static string? ResolvePreviousActivePlayerId(TimeBombGame game)
     {
         var lastRevealedWire = game.RevealedWires.LastOrDefault();
         return lastRevealedWire?.ActivePlayerId;
+    }
+
+    private static string? NormalizeNullableValue(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value;
     }
 }

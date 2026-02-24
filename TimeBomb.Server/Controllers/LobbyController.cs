@@ -40,6 +40,18 @@ namespace TimeBomb.Server.Controllers
             return Ok(ToLobbyResponse(lobby));
         }
 
+        [HttpGet("{lobbyCode}/state")]
+        public ActionResult<LobbyStateDto> GetState([FromRoute] string lobbyCode)
+        {
+            var lobby = _lobbyStore.GetByCode(lobbyCode);
+            if (lobby is null)
+            {
+                return NotFound();
+            }
+
+            return Ok(LobbyStateMapper.ToDto(lobby));
+        }
+
         [HttpPost]
         public ActionResult<LobbyResponse> Create([FromBody] CreateLobbyRequest request)
         {

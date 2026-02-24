@@ -13,12 +13,14 @@ builder.Services
     .AddControllers()
     .AddJsonOptions(options =>
     {
+        options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.Never;
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
 builder.Services
     .AddSignalR()
     .AddJsonProtocol(options =>
     {
+        options.PayloadSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.Never;
         options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
 builder.Services.AddSingleton<LobbyStore>();
