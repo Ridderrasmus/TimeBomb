@@ -6,6 +6,7 @@ interface TurnStateProminenceProps {
   roundTurnLimit: number;
   activePlayerName: string;
   isRoundPreparation: boolean;
+  forcedTargetName?: string | null;
 }
 
 export function TurnStateProminence({
@@ -16,8 +17,12 @@ export function TurnStateProminence({
   roundTurnLimit,
   activePlayerName,
   isRoundPreparation,
+  forcedTargetName,
 }: TurnStateProminenceProps) {
   const visibleTurn = Math.min(turnsTakenInRound + 1, roundTurnLimit);
+  const phaseLabel = isRoundPreparation ? "Preparation" : "Action";
+  const ownerLabel = isMyTurn ? "You" : activePlayerName;
+  const targetLabel = forcedTargetName ?? "Open pick";
 
   return (
     <section
@@ -28,10 +33,20 @@ export function TurnStateProminence({
       }
       aria-live="polite"
     >
-      <p className="turn-state-kicker">{isMyTurn ? "Your move" : "Turn update"}</p>
+      <div className="turn-state-header">
+        <p className="turn-state-kicker">
+          {isMyTurn ? "Your move" : "Turn update"}
+        </p>
+        <span className="turn-state-phase">{phaseLabel} phase</span>
+      </div>
       <p className="turn-state-title">
         {isMyTurn ? "You're up now" : `${activePlayerName} is acting`}
       </p>
+      <div className="turn-state-tags">
+        <span className="turn-state-tag">Owner: {ownerLabel}</span>
+        <span className="turn-state-tag">Target: {targetLabel}</span>
+        <span className="turn-state-tag">Phase: {phaseLabel}</span>
+      </div>
       <div className="turn-state-meta">
         <span>
           Round {round}/{maxRounds}
@@ -39,7 +54,6 @@ export function TurnStateProminence({
         <span>
           Turn {visibleTurn}/{roundTurnLimit}
         </span>
-        <span>{isRoundPreparation ? "Preparation phase" : "Action phase"}</span>
       </div>
     </section>
   );

@@ -199,6 +199,15 @@ function App() {
     ? displayedPlayers.find((player) => player.id === activeGame.activePlayerId)
         ?.name ?? activeGame.activePlayerId
     : "Unknown player";
+  const forcedTargetName =
+    activeGame?.forcedTargetPlayerIdForNextTurn
+      ? activeGame.forcedTargetPlayerNameForNextTurn ??
+        displayedPlayers.find(
+          (player) =>
+            player.id === activeGame.forcedTargetPlayerIdForNextTurn,
+        )?.name ??
+        activeGame.forcedTargetPlayerIdForNextTurn
+      : null;
   const isPendingDecisionRequester =
     pendingDecision?.requestedByPlayerId === playerId;
   const pendingDecisionRequesterName = pendingDecision
@@ -652,18 +661,6 @@ function App() {
             <p className="subtle lobby-meta">Connecting to game channel...</p>
           )}
 
-          {activeLobby?.state === "InProgress" && activeGame && (
-            <TurnStateProminence
-              isMyTurn={isMyTurn}
-              round={activeGame.currentRound}
-              maxRounds={activeGame.maxRounds}
-              turnsTakenInRound={activeGame.turnsTakenInRound}
-              roundTurnLimit={activeGame.roundTurnLimit}
-              activePlayerName={activeTurnPlayerName}
-              isRoundPreparation={isRoundPreparation}
-            />
-          )}
-
           {privateState?.team && (
             <section className="result team-panel">
               <p>
@@ -789,217 +786,231 @@ function App() {
 
           {activeGame && (
             <section className="result game-panel">
-              {/* Main Table Surface - Primary gameplay area */}
-              <div className="table-surface">
-                <div className="table-surface-inner">
-                  <PlayerStatusCards
-                    players={displayedPlayers}
-                    currentPlayerId={playerId}
-                    forcedTargetPlayerId={activeGame?.forcedTargetPlayerIdForNextTurn}
-                    showWireCounts={true}
-                    circularLayout={true}
-                  />
+              <div className="game-board-grid">
+                <div className="game-board-main">
+                  {activeLobby?.state === "InProgress" && (
+                    <TurnStateProminence
+                      isMyTurn={isMyTurn}
+                      round={activeGame.currentRound}
+                      maxRounds={activeGame.maxRounds}
+                      turnsTakenInRound={activeGame.turnsTakenInRound}
+                      roundTurnLimit={activeGame.roundTurnLimit}
+                      activePlayerName={activeTurnPlayerName}
+                      isRoundPreparation={isRoundPreparation}
+                      forcedTargetName={forcedTargetName}
+                    />
+                  )}
+                  {/* Main Table Surface - Primary gameplay area */}
+                  <div className="table-surface" data-seat-count={displayedPlayers.length}>
+                    <div className="table-surface-inner">
+                      <PlayerStatusCards
+                        players={displayedPlayers}
+                        currentPlayerId={playerId}
+                        forcedTargetPlayerId={activeGame?.forcedTargetPlayerIdForNextTurn}
+                        showWireCounts={true}
+                        circularLayout={true}
+                      />
 
-                  {/* Recent revealed cards on table */}
-                  {activeGame.revealedWires.length > 0 && (
-                    <div className="table-revealed-cards">
-                      <p className="table-revealed-label">Recent reveals:</p>
-                      <div className="table-revealed-row">
-                        {activeGame.revealedWires
-                          .slice(-3)
-                          .reverse()
-                          .map((wire, index) => (
-                            <div
-                              key={`${wire.round}-${wire.turn}`}
-                              className={`table-revealed-card${index === 0 ? " is-latest" : ""}`}
+                      {/* Recent revealed cards on table */}
+                      {activeGame.revealedWires.length > 0 && (
+                        <div className="table-revealed-cards">
+                          <p className="table-revealed-label">Recent reveals:</p>
+                          <div className="table-revealed-row">
+                            {activeGame.revealedWires
+                              .slice(-3)
+                              .reverse()
+                              .map((wire, index) => (
+                                <div
+                                  key={`${wire.round}-${wire.turn}`}
+                                  className={`table-revealed-card${index === 0 ? " is-latest" : ""}`}
+                                >
+                                  <WireVisualCard
+                                    kind={wire.card.kind}
+                                    color={wire.card.color}
+                                    subtitle={`R${wire.round} T${wire.turn}`}
+                                  />
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Player hand on table during prep or active play */}
+                      {(privateState?.visibleHand ?? []).length > 0 && (
+                        <div
+                          className={`table-player-hand${isRoundPreparation ? " is-prep-phase" : ""}`}
+                        >
+                          <p className="table-hand-label">
+                            {isRoundPreparation
+                              ? "Your hand (before shuffle):"
+                              : "Your hand:"}
+                          </p>
+                          <ul
+                            className={`table-hand-fan${isReadyForRound && isRoundPreparation ? " is-round-ready" : ""}`}
+                          >
+                            {(privateState?.visibleHand ?? []).map((card, index) => (
+                              <li
+                                key={`${card.kind}-${card.color ?? "none"}-${index}`}
+                                className="table-hand-card-item"
+                                style={{ "--fan-index": index } as CSSProperties}
+                              >
+                                <WireVisualCard
+                                  kind={card.kind}
+                                  color={card.color}
+                                  subtitle={`Card ${index + 1}`}
+                                />
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {isRoundPreparation && (
+                    <div className="result prep-panel">
+                      <p>
+                        <strong>Preparation phase (Round {activeGame.currentRound})</strong>
+                      </p>
+                      <p className="subtle">
+                        Review your hand below. When ready, it will be shuffled.
+                      </p>
+                      <p className="subtle">
+                        {activeGame.readyPlayerIds.length} / {displayedPlayers.length} players ready
+                      </p>
+                      <button
+                        type="button"
+                        className="submit-button"
+                        disabled={busy || !hubReady || isReadyForRound}
+                        onClick={markRoundReady}
+                      >
+                        {isReadyForRound ? "Ready submitted" : "I'm ready"}
+                      </button>
+                    </div>
+                  )}
+
+                  {activeLobby?.state === "InProgress" &&
+                    !pendingDecision &&
+                    !isRoundPreparation && (
+                      <div className="action-row">
+                        {displayedPlayers
+                          .filter(
+                            (player) =>
+                              player.id !== playerId &&
+                              player.remainingWireCount > 0,
+                          )
+                          .filter(
+                            (player) =>
+                              !activeGame.forcedTargetPlayerIdForNextTurn ||
+                              player.id ===
+                                activeGame.forcedTargetPlayerIdForNextTurn,
+                          )
+                          .map((player) => (
+                            <button
+                              key={player.id}
+                              type="button"
+                              className="mode-button"
+                              disabled={!canReveal}
+                              onClick={() => revealWire(player.id)}
                             >
-                              <WireVisualCard
-                                kind={wire.card.kind}
-                                color={wire.card.color}
-                                subtitle={`R${wire.round} T${wire.turn}`}
-                              />
-                            </div>
+                              Cut {player.name}
+                            </button>
                           ))}
                       </div>
-                    </div>
-                  )}
+                    )}
+                </div>
 
-                  {/* Player hand on table during prep or active play */}
-                  {(privateState?.visibleHand ?? []).length > 0 && (
-                    <div className={`table-player-hand${isRoundPreparation ? " is-prep-phase" : ""}`}>
-                      <p className="table-hand-label">
-                        {isRoundPreparation ? "Your hand (before shuffle):" : "Your hand:"}
+                <div className="game-board-aside">
+                  <div className="game-stat-grid">
+                    <article className="game-stat-card">
+                      <p className="game-stat-label">Round</p>
+                      <p className="game-stat-value">
+                        {activeGame.currentRound} / {activeGame.maxRounds}
                       </p>
-                      <ul
-                        className={`table-hand-fan${isReadyForRound && isRoundPreparation ? " is-round-ready" : ""}`}
-                      >
-                        {(privateState?.visibleHand ?? []).map((card, index) => (
-                          <li
-                            key={`${card.kind}-${card.color ?? "none"}-${index}`}
-                            className="table-hand-card-item"
-                            style={{ "--fan-index": index } as CSSProperties}
-                          >
-                            <WireVisualCard
-                              kind={card.kind}
-                              color={card.color}
-                              subtitle={`Card ${index + 1}`}
-                            />
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Game stats - moved below table */}
-              <div className="game-stat-grid">
-                <article className="game-stat-card">
-                  <p className="game-stat-label">Round</p>
-                  <p className="game-stat-value">
-                    {activeGame.currentRound} / {activeGame.maxRounds}
-                  </p>
-                </article>
-                <article className="game-stat-card">
-                  <p className="game-stat-label">Turns this round</p>
-                  <p className="game-stat-value">
-                    {activeGame.turnsTakenInRound} / {activeGame.roundTurnLimit}
-                  </p>
-                </article>
-                <article className="game-stat-card">
-                  <p className="game-stat-label">Defuse revealed</p>
-                  <p className="game-stat-value">
-                    {activeGame.revealedDefuseWireCount}
-                  </p>
-                </article>
-                <article className="game-stat-card">
-                  <p className="game-stat-label">Defused colors</p>
-                  {activeGame.defusedColors.length > 0 ? (
-                    <div className="game-stat-chip-row">
-                      {activeGame.defusedColors.map((color) => (
-                        <span key={color} className="game-stat-chip">
-                          {color}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="game-stat-muted">None yet</p>
-                  )}
-                </article>
-              </div>
-
-              {activeGame.outcome.isComplete ? (
-                <p>
-                  <strong>Winner:</strong> {activeGame.outcome.winner} (
-                  {activeGame.outcome.reason})
-                </p>
-              ) : (
-                <>
-                  {isRoundPreparation ? (
-                    <p>
-                      <strong>Round phase:</strong> Preparation (
-                      {activeGame.readyPlayerIds.length}/
-                      {displayedPlayers.length} ready)
-                    </p>
-                  ) : (
-                    <p>
-                      <strong>Round phase:</strong> Active turn play
-                    </p>
-                  )}
-                  <p>
-                    <strong>Current turn:</strong>{" "}
-                    {(activeLobby?.players ?? []).find(
-                      (player) => player.id === activeGame.activePlayerId,
-                    )?.name ?? activeGame.activePlayerId}
-                  </p>
-                  {activeGame.forcedTargetPlayerIdForNextTurn && (
-                    <p>
-                      <strong>Forced target:</strong>{" "}
-                      {activeGame.forcedTargetPlayerNameForNextTurn ??
-                        displayedPlayers.find(
-                          (player) =>
-                            player.id ===
-                            activeGame.forcedTargetPlayerIdForNextTurn,
-                        )?.name ??
-                        activeGame.forcedTargetPlayerIdForNextTurn}
-                    </p>
-                  )}
-                </>
-              )}
-
-              {effectCue && (
-                <section className="result effect-cue-panel" aria-live="polite">
-                  <p className="effect-cue-kicker">
-                    Effect cue · R{effectCue.round} T{effectCue.turn}
-                  </p>
-                  <p className="effect-cue-text">{effectCue.effect}</p>
-                  <p className="subtle effect-cue-meta">
-                    {effectActivePlayerName} cut {effectRevealedFromPlayerName}
-                  </p>
-                  {effectForcedTargetName && (
-                    <p className="subtle effect-cue-meta">
-                      Forced target: {effectForcedTargetName}
-                    </p>
-                  )}
-                </section>
-              )}
-              <RevealedPileTotals
-                wires={activeGame.revealedWires}
-                players={displayedPlayers}
-                totalsByPlayer={activeGame.revealedPileTotalsByPlayer ?? null}
-              />
-
-              {isRoundPreparation && (
-                <div className="result prep-panel">
-                  <p>
-                    <strong>Preparation phase (Round {activeGame.currentRound})</strong>
-                  </p>
-                  <p className="subtle">
-                    Review your hand below. When ready, it will be shuffled.
-                  </p>
-                  <p className="subtle">
-                    {activeGame.readyPlayerIds.length} / {displayedPlayers.length} players ready
-                  </p>
-                  <button
-                    type="button"
-                    className="submit-button"
-                    disabled={busy || !hubReady || isReadyForRound}
-                    onClick={markRoundReady}
-                  >
-                    {isReadyForRound ? "Ready submitted" : "I'm ready"}
-                  </button>
-                </div>
-              )}
-
-              {activeLobby?.state === "InProgress" &&
-                !pendingDecision &&
-                !isRoundPreparation && (
-                  <div className="action-row">
-                    {displayedPlayers
-                      .filter(
-                        (player) =>
-                          player.id !== playerId &&
-                          player.remainingWireCount > 0,
-                      )
-                      .filter(
-                        (player) =>
-                          !activeGame.forcedTargetPlayerIdForNextTurn ||
-                          player.id ===
-                            activeGame.forcedTargetPlayerIdForNextTurn,
-                      )
-                      .map((player) => (
-                        <button
-                          key={player.id}
-                          type="button"
-                          className="mode-button"
-                          disabled={!canReveal}
-                          onClick={() => revealWire(player.id)}
-                        >
-                          Cut {player.name}
-                        </button>
-                      ))}
+                    </article>
+                    <article className="game-stat-card">
+                      <p className="game-stat-label">Turns this round</p>
+                      <p className="game-stat-value">
+                        {activeGame.turnsTakenInRound} / {activeGame.roundTurnLimit}
+                      </p>
+                    </article>
+                    <article className="game-stat-card">
+                      <p className="game-stat-label">Defuse revealed</p>
+                      <p className="game-stat-value">
+                        {activeGame.revealedDefuseWireCount}
+                      </p>
+                    </article>
+                    <article className="game-stat-card">
+                      <p className="game-stat-label">Defused colors</p>
+                      {activeGame.defusedColors.length > 0 ? (
+                        <div className="game-stat-chip-row">
+                          {activeGame.defusedColors.map((color) => (
+                            <span key={color} className="game-stat-chip">
+                              {color}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="game-stat-muted">None yet</p>
+                      )}
+                    </article>
                   </div>
-                )}
+
+                  <section className="result game-phase-panel">
+                    {activeGame.outcome.isComplete ? (
+                      <p>
+                        <strong>Winner:</strong> {activeGame.outcome.winner} (
+                        {activeGame.outcome.reason})
+                      </p>
+                    ) : (
+                      <>
+                        {isRoundPreparation ? (
+                          <p>
+                            <strong>Round phase:</strong> Preparation (
+                            {activeGame.readyPlayerIds.length}/
+                            {displayedPlayers.length} ready)
+                          </p>
+                        ) : (
+                          <p>
+                            <strong>Round phase:</strong> Active turn play
+                          </p>
+                        )}
+                        <p>
+                          <strong>Current turn:</strong> {activeTurnPlayerName}
+                        </p>
+                        {forcedTargetName && (
+                          <p>
+                            <strong>Forced target:</strong> {forcedTargetName}
+                          </p>
+                        )}
+                      </>
+                    )}
+                  </section>
+
+                  {effectCue && (
+                    <section className="result effect-cue-panel" aria-live="polite">
+                      <p className="effect-cue-kicker">
+                        Effect cue · R{effectCue.round} T{effectCue.turn}
+                      </p>
+                      <p className="effect-cue-text">{effectCue.effect}</p>
+                      <p className="subtle effect-cue-meta">
+                        {effectActivePlayerName} cut {effectRevealedFromPlayerName}
+                      </p>
+                      {effectForcedTargetName && (
+                        <p className="subtle effect-cue-meta">
+                          Forced target: {effectForcedTargetName}
+                        </p>
+                      )}
+                    </section>
+                  )}
+
+                  <RevealedPileTotals
+                    wires={activeGame.revealedWires}
+                    players={displayedPlayers}
+                    totalsByPlayer={activeGame.revealedPileTotalsByPlayer ?? null}
+                  />
+                </div>
+              </div>
 
               {pendingDecision && (
                 <div className="decision-overlay" role="presentation">
@@ -1070,12 +1081,12 @@ function App() {
             </section>
           )}
 
-            <button
-              type="button"
-              className="mode-button leave-button"
-              onClick={leaveLobby}
-              disabled={busy}
-            >
+          <button
+            type="button"
+            className="mode-button leave-button"
+            onClick={leaveLobby}
+            disabled={busy}
+          >
             Leave lobby
           </button>
 

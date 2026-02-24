@@ -35,6 +35,14 @@ export function PlayerStatusCards({
         "--seat-count": players.length,
         "--active-seat-index": activeSeatIndex >= 0 ? activeSeatIndex : 0,
         "--forced-seat-index": forcedSeatIndex >= 0 ? forcedSeatIndex : 0,
+        "--table-radius":
+          players.length >= 6
+            ? "clamp(10.4rem, 26vw, 14.6rem)"
+            : players.length === 5
+              ? "clamp(10rem, 25vw, 14rem)"
+              : players.length === 4
+                ? "clamp(9.6rem, 24vw, 13.4rem)"
+                : "clamp(8.2rem, 21vw, 11.2rem)",
       } as CSSProperties)
     : undefined;
   const hasTurnPath = useCircularLayout && activeSeatIndex >= 0;
