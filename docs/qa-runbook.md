@@ -35,6 +35,7 @@ This prints the Dashboard URL and resource endpoints.
 ## Playwright UI smoke checks (concise)
 - Use the Playwright MCP server to open the `webfrontend` endpoint from Aspire resources.
 - Game start requires 4 players. Preferred approach: use a debug mode to spawn 3 additional players before starting.
+- Debug spawn endpoint (dev/QA only): `POST /api/lobby/{code}/debug/spawn-players`.
 - Fallback if debug spawning is unavailable: open three extra isolated sessions (incognito contexts/tabs) and join the lobby.
 - Smoke flow: load UI, create lobby, add players until 4 present, start game, reveal a wire, resolve any pending decision.
 

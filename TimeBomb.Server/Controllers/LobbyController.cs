@@ -1,6 +1,7 @@
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
-using TimeBomb.Server.Classes;
 using Microsoft.AspNetCore.SignalR;
+using TimeBomb.Server.Classes;
 using TimeBomb.Server.Hubs;
 
 namespace TimeBomb.Server.Controllers
@@ -11,11 +12,13 @@ namespace TimeBomb.Server.Controllers
     {
         private readonly LobbyStore _lobbyStore;
         private readonly IHubContext<GameHub> _hubContext;
+        private readonly IWebHostEnvironment _environment;
 
-        public LobbyController(LobbyStore lobbyStore, IHubContext<GameHub> hubContext)
+        public LobbyController(LobbyStore lobbyStore, IHubContext<GameHub> hubContext, IWebHostEnvironment environment)
         {
             _lobbyStore = lobbyStore;
             _hubContext = hubContext;
+            _environment = environment;
         }
 
         [HttpGet]
@@ -161,11 +164,35 @@ namespace TimeBomb.Server.Controllers
             return Ok(ToLobbyResponse(lobby!));
         }
 
+        [HttpPost("{lobbyCode}/debug/spawn-players")]
+        public async Task<ActionResult<LobbyResponse>> DebugSpawnPlayers([FromRoute] string lobbyCode)
+        {
+            if (!IsDebugEnvironment())
+            {
+                return NotFound();
+            }
+
+            var success = _lobbyStore.TryAddDebugPlayers(lobbyCode, out var lobby, out var error);
+            if (!success)
+            {
+                return Problem(detail: error, statusCode: StatusCodes.Status400BadRequest);
+            }
+
+            await BroadcastLobbyStateAsync(lobby!);
+            return Ok(ToLobbyResponse(lobby!));
+        }
+
         private Task BroadcastLobbyStateAsync(GameLobby lobby)
         {
             return _hubContext.Clients
                 .Group(HubGroups.Lobby(lobby.LobbyCode))
                 .SendAsync("LobbyStateUpdated", LobbyStateMapper.ToDto(lobby));
+        }
+
+        private bool IsDebugEnvironment()
+        {
+            return _environment.IsDevelopment()
+                || string.Equals(_environment.EnvironmentName, "QA", StringComparison.OrdinalIgnoreCase);
         }
 
         private static LobbySummaryResponse ToSummaryResponse(GameLobby lobby)

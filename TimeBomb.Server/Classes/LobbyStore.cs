@@ -102,6 +102,62 @@ public class LobbyStore
         }
     }
 
+    public bool TryAddDebugPlayers(string lobbyCode, out GameLobby? updatedLobby, out string? error)
+    {
+        lock (_gate)
+        {
+            updatedLobby = null;
+            error = null;
+
+            if (!_lobbiesByCode.TryGetValue(lobbyCode, out var lobby))
+            {
+                error = "Lobby not found.";
+                return false;
+            }
+
+            if (lobby.CurrentState != GameState.Lobby)
+            {
+                error = "Cannot add debug players after the game has started.";
+                return false;
+            }
+
+            if (lobby.Players.Count >= MinPlayers)
+            {
+                error = "Lobby already has enough players to start.";
+                return false;
+            }
+
+            var remainingSlots = MaxPlayers - lobby.Players.Count;
+            var neededPlayers = MinPlayers - lobby.Players.Count;
+            var playersToAdd = Math.Min(neededPlayers, remainingSlots);
+            if (playersToAdd <= 0)
+            {
+                error = "Lobby is full.";
+                return false;
+            }
+
+            var nameIndex = 1;
+            for (var i = 0; i < playersToAdd; i++)
+            {
+                string playerName;
+                do
+                {
+                    playerName = $"Debug Player {nameIndex++}";
+                }
+                while (lobby.Players.Any(player => string.Equals(player.Name, playerName, StringComparison.OrdinalIgnoreCase)));
+
+                lobby.Players.Add(new Player
+                {
+                    Id = Guid.NewGuid().ToString("N"),
+                    Name = playerName
+                });
+            }
+
+            updatedLobby = CloneLobby(lobby);
+            return true;
+        }
+    }
+
     public bool TryLeave(string lobbyCode, string playerId, out GameLobby? updatedLobby, out string? error)
     {
         lock (_gate)
