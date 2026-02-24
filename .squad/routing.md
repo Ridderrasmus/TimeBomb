@@ -4,6 +4,7 @@
 - UI, UX, styling, and in-game interaction flows -> Hicks
 - Backend/game-state logic, API contracts, validation -> Parker
 - Test design, regression checks, edge cases -> Bishop
+- Docs, runbooks, technical writing -> Hudson
 - Cross-domain planning, architecture, review gates -> Ripley
 - Session logging, decision consolidation -> Scribe
 - Backlog/workflow monitoring -> Ralph

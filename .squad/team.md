@@ -12,5 +12,6 @@
 | Hicks | Game UI Dev | In-game UX, visual polish, interaction quality | ⚛️ Frontend |
 | Parker | Backend Dev | Server gameplay logic, API flow, state validation | 🔧 Backend |
 | Bishop | Tester | Game logic scenarios, edge cases, regression tests | 🧪 QA |
+| Hudson | Technical Writer | Docs, runbooks, API/event references | 📝 Docs |
 | Scribe | Session Logger | Decisions, cross-agent memory, session logs | 📋 Scribe |
 | Ralph | Work Monitor | Backlog monitoring and continuous work checks | 🔄 Monitor |

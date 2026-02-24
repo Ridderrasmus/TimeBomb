@@ -7,6 +7,13 @@
       "universe": "Alien",
       "members": ["Ripley", "Hicks", "Parker", "Bishop", "Scribe", "Ralph"],
       "notes": "Initial Squad assignment for Time Bomb Evolution gameplay UI and logic development"
+    },
+    {
+      "assignment_id": "assignment-20260224t141656z",
+      "created_at": "2026-02-24T14:16:56.383Z",
+      "universe": "Alien",
+      "members": ["Ripley", "Hicks", "Parker", "Bishop", "Hudson", "Scribe", "Ralph"],
+      "notes": "Added Technical Writer to document UI, backend, and runbooks"
     }
   ]
 }
