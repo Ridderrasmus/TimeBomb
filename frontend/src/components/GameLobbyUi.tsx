@@ -1,23 +1,15 @@
 import { PlayerStatusCards } from "./PlayerStatusCards";
 
 import { useState } from "react";
+import type {
+  GameVariant,
+  LobbyStateName,
+  PlayerSummary,
+  RulesDraft,
+  WireColor,
+} from "../types/game";
 
-type GameVariant = "Standard" | "Evolution";
-export type LobbyStateName = "Lobby" | "InProgress" | "Completed";
-export type WireColor = "Green" | "Orange" | "Pink" | "Yellow" | "Blue" | "Red";
-
-export interface RulesDraft {
-  variant: GameVariant;
-  randomizeCardColors: boolean;
-  selectedBombColors?: WireColor[] | null;
-}
-
-export interface PlayerSummary {
-  id: string;
-  name: string;
-  remainingWireCount: number;
-  isActiveTurnPlayer: boolean;
-}
+export type { LobbyStateName, PlayerSummary, RulesDraft, WireColor };
 
 interface GameLobbyUiProps {
   lobbyState: LobbyStateName;

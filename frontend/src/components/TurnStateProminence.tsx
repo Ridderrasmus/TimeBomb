@@ -32,31 +32,36 @@ export function TurnStateProminence({
       }
       aria-live="polite"
     >
-      <p className="turn-state-kicker">{isMyTurn ? "Your move" : "Turn update"}</p>
-      <div className="turn-state-title-row">
-        <p className="turn-state-title">
-          {isMyTurn ? "You're up now" : `${activePlayerName} is acting`}
-        </p>
-        {isMyTurn && myTeam && (
-          <span
-            className={`turn-state-team-chip ${
+      <div className="turn-state-layout">
+        <div className="turn-state-main">
+          <p className="turn-state-kicker">{isMyTurn ? "Your move" : "Turn update"}</p>
+          <p className="turn-state-title">
+            {isMyTurn ? "You're up now" : `${activePlayerName} is acting`}
+          </p>
+          <div className="turn-state-meta">
+            <span>
+              Round {round}/{maxRounds}
+            </span>
+            <span>
+              Turn {visibleTurn}/{roundTurnLimit}
+            </span>
+            <span>{isRoundPreparation ? "Preparation phase" : "Action phase"}</span>
+          </div>
+        </div>
+
+        {myTeam && (
+          <aside
+            className={`turn-state-team-panel ${
               myTeam === "Moriarty"
-                ? "turn-state-team-chip-moriarty"
-                : "turn-state-team-chip-sherlock"
+                ? "turn-state-team-panel-moriarty"
+                : "turn-state-team-panel-sherlock"
             }`}
+            aria-label={`Your team is ${myTeam}`}
           >
-            {myTeam}
-          </span>
+            <p className="turn-state-team-label">Your team:</p>
+            <p className="turn-state-team-value">{myTeam}</p>
+          </aside>
         )}
-      </div>
-      <div className="turn-state-meta">
-        <span>
-          Round {round}/{maxRounds}
-        </span>
-        <span>
-          Turn {visibleTurn}/{roundTurnLimit}
-        </span>
-        <span>{isRoundPreparation ? "Preparation phase" : "Action phase"}</span>
       </div>
     </section>
   );

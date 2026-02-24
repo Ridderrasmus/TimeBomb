@@ -1,15 +1,14 @@
-import type { ReactNode } from "react";
 import { useState } from "react";
 
-import {
-  GameLobbyUi,
-  type LobbyStateName,
-  type PlayerSummary,
-  type RulesDraft,
-  type WireColor,
-} from "./GameLobbyUi";
+import type {
+  LobbyStateName,
+  PlayerSummary,
+  RulesDraft,
+  WireColor,
+} from "../types/game";
+import { GameLobbyUi } from "./GameLobbyUi";
 
-interface LobbyScreenProps {
+export interface LobbyScreenProps {
   lobbyName: string;
   lobbyCode: string;
   lobbyState: LobbyStateName;
@@ -30,9 +29,7 @@ interface LobbyScreenProps {
   onLeaveLobby: () => void;
   showDebugSpawnButton?: boolean;
   onDebugSpawnPlayers?: () => void;
-  isInProgressLayout?: boolean;
   error?: string | null;
-  inProgressContent?: ReactNode;
 }
 
 export function LobbyScreen({
@@ -56,9 +53,7 @@ export function LobbyScreen({
   onLeaveLobby,
   showDebugSpawnButton,
   onDebugSpawnPlayers,
-  isInProgressLayout,
   error,
-  inProgressContent,
 }: LobbyScreenProps) {
   const [inviteCopyStatus, setInviteCopyStatus] = useState<
     "idle" | "copied" | "failed"
@@ -81,10 +76,7 @@ export function LobbyScreen({
   };
 
   return (
-    <main
-      className={isInProgressLayout ? "lobby-card in-progress-layout" : "card lobby-card"}
-      aria-label="Lobby screen"
-    >
+    <main className="card lobby-card" aria-label="Lobby screen">
       <div className="lobby-header-row">
         <h1>{lobbyName}</h1>
         {showDebugSpawnButton && onDebugSpawnPlayers && (
@@ -181,8 +173,6 @@ export function LobbyScreen({
         onToggleSelectedBombColor={onToggleSelectedBombColor}
         onStartGame={onStartGame}
       />
-
-      {inProgressContent}
 
       <button
         type="button"

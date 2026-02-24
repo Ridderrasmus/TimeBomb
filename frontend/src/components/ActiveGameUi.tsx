@@ -3,6 +3,16 @@ import type { CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import type {
+  ActiveGameState,
+  PendingDecision,
+  PlayerSummary,
+  RecentEffectCue,
+  RulesDraft,
+  Team,
+  WireCard,
+  WireColor,
+} from "../types/game";
 
 import "./ActiveGameUi.css";
 
@@ -11,87 +21,18 @@ import { RevealedWireHistory } from "./RevealedWireHistory";
 import { TurnStateProminence } from "./TurnStateProminence";
 import { WireVisualCard } from "./WireVisualCard";
 
-type WireColor = "Green" | "Orange" | "Pink" | "Yellow" | "Blue" | "Red";
-type WireKind = "Defuse" | "Bomb";
-
-type PendingDecisionType = "AssignDefuseColor" | "ReactivateBlueColor";
-
-interface PlayerSummary {
-  id: string;
-  name: string;
-  remainingWireCount: number;
-  isActiveTurnPlayer: boolean;
-}
-
-interface RevealedWire {
-  round: number;
-  turn: number;
-  activePlayerId: string;
-  revealedFromPlayerId: string;
-  card: {
-    kind: WireKind;
-    color?: WireColor | null;
-  };
-  defusedColorAssigned?: WireColor | null;
-  reactivatedColor?: WireColor | null;
-  effect?: string | null;
-}
-
-interface RecentEffectCue {
-  round: number;
-  turn: number;
-  effect: string;
-}
-
-interface PendingDecision {
-  type: PendingDecisionType;
-  requestedByPlayerId: string;
-  availableColors: WireColor[];
-}
-
-interface ActiveGameState {
-  currentRound: number;
-  maxRounds: number;
-  turnsTakenInRound: number;
-  roundTurnLimit: number;
-  activePlayerId: string;
-  isRoundPreparation: boolean;
-  readyPlayerIds: string[];
-  forcedTargetPlayerIdForNextTurn?: string | null;
-  forcedTargetPlayerNameForNextTurn?: string | null;
-  revealedDefuseWireCount: number;
-  defusedColors: WireColor[];
-  selectedBombColors?: WireColor[];
-  revealedWires: RevealedWire[];
-  revealedPileTotalsByPlayer?: Record<string, number> | null;
-  outcome: {
-    winner?: "Sherlock" | "Moriarty" | null;
-    reason: "None" | "BombExploded" | "DefuseObjectiveComplete" | "RoundLimitReached";
-    isComplete: boolean;
-  };
-}
-
-interface RulesSummary {
-  variant: "Standard" | "Evolution";
-  randomizeCardColors: boolean;
-  selectedBombColors?: WireColor[] | null;
-}
-
-interface ActiveGameUiProps {
+export interface ActiveGameUiProps {
   players: PlayerSummary[];
   currentPlayerId: string;
   game: ActiveGameState;
-  rules: RulesSummary;
-  myTeam?: "Sherlock" | "Moriarty" | null;
+  rules: RulesDraft;
+  myTeam?: Team | null;
   isMyTurn: boolean;
   activePlayerName: string;
   canReveal: boolean;
   busy: boolean;
   hubReady: boolean;
-  visibleHand: Array<{
-    kind: WireKind;
-    color?: WireColor | null;
-  }>;
+  visibleHand: WireCard[];
   isReadyForRound: boolean;
   cuttablePlayerIds: string[];
   pendingDecision: PendingDecision | null;

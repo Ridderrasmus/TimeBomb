@@ -6,20 +6,14 @@ import { WireVisualCard } from "./components/WireVisualCard";
 import { TurnStateProminence } from "./components/TurnStateProminence";
 import { PlayerStatusCards } from "./components/PlayerStatusCards";
 import { RevealedWireHistory } from "./components/RevealedWireHistory";
-
-type WireColor = "Green" | "Orange" | "Pink" | "Yellow" | "Blue" | "Red";
-type WireKind = "Defuse" | "Bomb";
-type GameVariant = "Standard" | "Evolution";
-type LobbyStateName = "Lobby" | "InProgress" | "Completed";
-
-const ALL_WIRE_COLORS: WireColor[] = [
-  "Green",
-  "Orange",
-  "Pink",
-  "Yellow",
-  "Blue",
-  "Red",
-];
+import {
+  ALL_WIRE_COLORS,
+  type LobbyStateName,
+  type RulesDraft,
+  type WireCard,
+  type WireColor,
+  type WireKind,
+} from "./types/game";
 
 function generateMockPlayers(count: 1 | 4 | 6) {
   const allPlayers = [
@@ -99,7 +93,7 @@ function FullGameShowcase() {
   });
 
   const wires = generateMockWires(6);
-  const hand: Array<{ kind: WireKind; color: WireColor | null }> = [
+  const hand: WireCard[] = [
     { kind: "Bomb", color: "Red" },
     { kind: "Defuse", color: "Green" },
     { kind: "Defuse", color: "Blue" },
@@ -113,6 +107,8 @@ function FullGameShowcase() {
     players.find((player) => player.id === lastCutTargetId)?.name ?? null;
 
   const mockGame = {
+    gameId: "mock-game-1",
+    variant: "Evolution" as const,
     currentRound: 2,
     maxRounds: 4,
     turnsTakenInRound: 4,
@@ -149,6 +145,8 @@ function FullGameShowcase() {
     round: 2,
     turn: 4,
     effect: "Forced cut on Charlie next turn",
+    activePlayerId: "p1",
+    revealedFromPlayerId: "p2",
   };
 
   return (
@@ -205,11 +203,7 @@ function LobbyShowcase() {
   const [myTeam, setMyTeam] = useState<"Sherlock" | "Moriarty" | null>(null);
   const players = generateMockPlayers(playerCount);
   const creatorName = players[0]?.name ?? "Unknown";
-  const [rulesDraft, setRulesDraft] = useState<{
-    variant: GameVariant;
-    randomizeCardColors: boolean;
-    selectedBombColors?: WireColor[] | null;
-  }>({
+  const [rulesDraft, setRulesDraft] = useState<RulesDraft>({
     variant: "Evolution",
     randomizeCardColors: false,
     selectedBombColors: ["Green", "Orange", "Blue"],
@@ -322,7 +316,6 @@ function LobbyShowcase() {
         onDebugSpawnPlayers={() =>
           setMockActionMessage("Mock action: Add debug users clicked")
         }
-        isInProgressLayout={lobbyState === "InProgress"}
         error={null}
       />
 
@@ -397,6 +390,7 @@ function TurnBannerShowcase() {
             roundTurnLimit={6}
             activePlayerName="Alice"
             isRoundPreparation={false}
+            myTeam="Moriarty"
           />
         </div>
       </div>
