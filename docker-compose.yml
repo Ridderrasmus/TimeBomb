@@ -1,0 +1,6 @@
+services:
+  timebomb:
+    build: .
+    ports:
+      - "6011:8080"
+    restart: unless-stopped
