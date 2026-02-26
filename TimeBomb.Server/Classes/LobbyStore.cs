@@ -202,6 +202,54 @@ public class LobbyStore
         }
     }
 
+    public bool TryKickPlayer(
+        string lobbyCode,
+        string requesterPlayerId,
+        string targetPlayerId,
+        out GameLobby? updatedLobby,
+        out string? error)
+    {
+        lock (_gate)
+        {
+            updatedLobby = null;
+            error = null;
+
+            if (!_lobbiesByCode.TryGetValue(lobbyCode, out var lobby))
+            {
+                error = "Lobby not found.";
+                return false;
+            }
+
+            if (lobby.CurrentState != GameState.Lobby)
+            {
+                error = "Cannot kick players after the game has started.";
+                return false;
+            }
+
+            if (lobby.CreatedByPlayerId != requesterPlayerId)
+            {
+                error = "Only the lobby creator can kick players.";
+                return false;
+            }
+
+            if (requesterPlayerId == targetPlayerId)
+            {
+                error = "Lobby creator cannot kick themselves.";
+                return false;
+            }
+
+            var removed = lobby.Players.RemoveAll(player => player.Id == targetPlayerId);
+            if (removed == 0)
+            {
+                error = "Player not found in lobby.";
+                return false;
+            }
+
+            updatedLobby = CloneLobby(lobby);
+            return true;
+        }
+    }
+
     public bool Delete(string lobbyCode)
     {
         lock (_gate)
@@ -268,21 +316,6 @@ public class LobbyStore
                 return false;
             }
 
-            if (!rules.RandomizeCardColors)
-            {
-                if (rules.SelectedBombColors is null || rules.SelectedBombColors.Count != lobby.Players.Count)
-                {
-                    error = $"Select exactly {lobby.Players.Count} bomb colors when randomization is disabled.";
-                    return false;
-                }
-
-                if (rules.SelectedBombColors.Distinct().Count() != rules.SelectedBombColors.Count)
-                {
-                    error = "Selected bomb colors must be unique.";
-                    return false;
-                }
-            }
-
             lobby.Rules = new LobbyRulesSettings
             {
                 Variant = rules.Variant,
@@ -313,6 +346,11 @@ public class LobbyStore
                 return false;
             }
 
+            if (!ValidateSelectedBombColorsForStart(lobby, out error))
+            {
+                return false;
+            }
+
             var options = new TimeBombGameOptions
             {
                 Variant = lobby.Rules.Variant,
@@ -333,6 +371,30 @@ public class LobbyStore
             updatedLobby = CloneLobby(lobby);
             return true;
         }
+    }
+
+    private static bool ValidateSelectedBombColorsForStart(GameLobby lobby, out string? error)
+    {
+        error = null;
+
+        if (lobby.Rules.RandomizeCardColors)
+        {
+            return true;
+        }
+
+        if (lobby.Rules.SelectedBombColors is null || lobby.Rules.SelectedBombColors.Count != lobby.Players.Count)
+        {
+            error = $"Select exactly {lobby.Players.Count} bomb colors when randomization is disabled.";
+            return false;
+        }
+
+        if (lobby.Rules.SelectedBombColors.Distinct().Count() != lobby.Rules.SelectedBombColors.Count)
+        {
+            error = "Selected bomb colors must be unique.";
+            return false;
+        }
+
+        return true;
     }
 
     public bool TryReturnToLobby(string lobbyCode, string requesterPlayerId, out GameLobby? updatedLobby, out string? error)

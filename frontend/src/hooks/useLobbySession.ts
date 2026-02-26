@@ -120,7 +120,7 @@ export function useLobbySession(): LobbySession {
     (activeLobby?.createdByPlayerId ?? currentLobby?.createdByPlayerId) === playerId;
   const activeGame = activeLobby?.game ?? null;
   const selectedColorCount = rulesDraft?.selectedBombColors?.length ?? 0;
-  const requiredColorCount = displayedPlayers.length;
+  const requiredColorCount = Math.max(4, displayedPlayers.length);
   const isMyTurn = activeGame?.activePlayerId === playerId;
   const pendingDecision = activeGame?.pendingDecision ?? null;
   const isRoundPreparation = !!activeGame?.isRoundPreparation;
@@ -247,6 +247,16 @@ export function useLobbySession(): LobbySession {
     void hubService
       .connect(activeLobbyCode, {
         onLobbyStateUpdated: (state) => {
+          const stillInLobby = state.players.some((player) => player.id === playerId);
+          if (!stillInLobby) {
+            setError("You were removed from the lobby.");
+            setCurrentLobby(null);
+            setLiveLobby(null);
+            setPrivateState(null);
+            setRulesDraft(null);
+            return;
+          }
+
           setLiveLobby(state);
           setError(null);
           void refreshPrivateState(state.lobbyCode);

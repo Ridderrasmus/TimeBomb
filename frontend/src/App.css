@@ -436,6 +436,17 @@ button:disabled {
   gap: 0.42rem;
 }
 
+.lobby-kick-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.42rem;
+}
+
+.lobby-kick-controls .mode-button {
+  width: auto;
+  min-width: 140px;
+}
+
 .action-row .mode-button {
   width: auto;
   min-width: 110px;

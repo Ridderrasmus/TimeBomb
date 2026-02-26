@@ -310,6 +310,9 @@ function LobbyShowcase() {
             selectedBombColors: Array.from(current),
           });
         }}
+        onKickPlayer={(playerId) =>
+          setMockActionMessage(`Mock action: Kick player ${playerId} clicked`)
+        }
         onStartGame={() => setMockActionMessage("Mock action: Start game clicked")}
         onLeaveLobby={() => setMockActionMessage("Mock action: Leave lobby clicked")}
         showDebugSpawnButton={isCreator && lobbyState === "Lobby"}

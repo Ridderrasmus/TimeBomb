@@ -25,6 +25,7 @@ export interface LobbyScreenProps {
   allWireColors: WireColor[];
   onRulesDraftChange: (nextDraft: RulesDraft) => void;
   onToggleSelectedBombColor: (color: WireColor) => void;
+  onKickPlayer: (playerId: string) => void;
   onStartGame: () => void;
   onLeaveLobby: () => void;
   showDebugSpawnButton?: boolean;
@@ -49,6 +50,7 @@ export function LobbyScreen({
   allWireColors,
   onRulesDraftChange,
   onToggleSelectedBombColor,
+  onKickPlayer,
   onStartGame,
   onLeaveLobby,
   showDebugSpawnButton,
@@ -171,6 +173,7 @@ export function LobbyScreen({
         allWireColors={allWireColors}
         onRulesDraftChange={onRulesDraftChange}
         onToggleSelectedBombColor={onToggleSelectedBombColor}
+        onKickPlayer={onKickPlayer}
         onStartGame={onStartGame}
       />
 

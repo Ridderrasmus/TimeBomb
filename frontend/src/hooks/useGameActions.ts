@@ -7,8 +7,9 @@ import type { LobbySession } from "./useLobbySession";
 
 export interface GameActions {
   submit: (event: FormEvent) => Promise<void>;
-  saveRules: (draftToSave: RulesDraft, silentIncompleteSelection?: boolean) => Promise<void>;
+  saveRules: (draftToSave: RulesDraft) => Promise<void>;
   toggleSelectedBombColor: (color: WireColor) => void;
+  kickPlayer: (targetPlayerId: string) => Promise<void>;
   startGame: () => Promise<void>;
   returnToLobby: () => Promise<void>;
   spawnDebugPlayers: () => Promise<void>;
@@ -64,22 +65,8 @@ export function useGameActions(session: LobbySession, isDevMode: boolean): GameA
   );
 
   const saveRules = useCallback(
-    async (draftToSave: RulesDraft, silentIncompleteSelection = false) => {
+    async (draftToSave: RulesDraft) => {
       if (!session.currentLobby || !session.isCreator) {
-        return;
-      }
-
-      const draftSelectedCount = draftToSave.selectedBombColors?.length ?? 0;
-
-      if (
-        !draftToSave.randomizeCardColors &&
-        draftSelectedCount !== session.requiredColorCount
-      ) {
-        if (!silentIncompleteSelection) {
-          session.setError(
-            `Select exactly ${session.requiredColorCount} colors when randomization is disabled.`,
-          );
-        }
         return;
       }
 
@@ -120,13 +107,47 @@ export function useGameActions(session: LobbySession, isDevMode: boolean): GameA
       };
 
       session.setRulesDraft(nextDraft);
-      void saveRules(nextDraft, true);
+      void saveRules(nextDraft);
     },
     [saveRules, session],
   );
 
+  const kickPlayer = useCallback(
+    async (targetPlayerId: string) => {
+      if (!session.currentLobby || !session.isCreator) {
+        return;
+      }
+
+      if (targetPlayerId === session.playerId) {
+        return;
+      }
+
+      session.setBusy(true);
+      session.setError(null);
+      try {
+        await lobbyApi.kickPlayer(
+          session.currentLobby.lobbyCode,
+          session.playerId,
+          targetPlayerId,
+        );
+        await session.hubServiceRef.current?.requestLobbyState(session.currentLobby.lobbyCode);
+        await session.refreshPrivateState(session.currentLobby.lobbyCode);
+      } catch (err) {
+        session.setError(err instanceof Error ? err.message : "Unable to remove player.");
+      } finally {
+        session.setBusy(false);
+      }
+    },
+    [session],
+  );
+
   const startGame = useCallback(async () => {
     if (!session.currentLobby || !session.isCreator) {
+      return;
+    }
+
+    if (session.displayedPlayers.length < 4 || session.displayedPlayers.length > 6) {
+      session.setError("Game can only start with 4 to 6 players.");
       return;
     }
 
@@ -298,6 +319,7 @@ export function useGameActions(session: LobbySession, isDevMode: boolean): GameA
     submit,
     saveRules,
     toggleSelectedBombColor,
+    kickPlayer,
     startGame,
     returnToLobby,
     spawnDebugPlayers,

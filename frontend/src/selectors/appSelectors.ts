@@ -27,9 +27,12 @@ export const selectLobbyScreenProps = (
   allWireColors: ALL_WIRE_COLORS,
   onRulesDraftChange: (nextDraft) => {
     session.setRulesDraft(nextDraft);
-    void actions.saveRules(nextDraft, true);
+    void actions.saveRules(nextDraft);
   },
   onToggleSelectedBombColor: actions.toggleSelectedBombColor,
+  onKickPlayer: (playerId) => {
+    void actions.kickPlayer(playerId);
+  },
   onStartGame: () => {
     void actions.startGame();
   },
