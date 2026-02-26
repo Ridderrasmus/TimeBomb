@@ -221,9 +221,9 @@ public class LobbyStore
                 return false;
             }
 
-            if (lobby.CurrentState != GameState.Lobby)
+            if (lobby.CurrentState == GameState.InProgress)
             {
-                error = "Game has already started.";
+                error = "Game is already in progress.";
                 return false;
             }
 
@@ -307,9 +307,9 @@ public class LobbyStore
             }
 
             var lobby = _lobbiesByCode[lobbyCode];
-            if (lobby.CurrentState != GameState.Lobby)
+            if (lobby.CurrentState == GameState.InProgress)
             {
-                error = "Game has already started.";
+                error = "Game is already in progress.";
                 return false;
             }
 
@@ -329,6 +329,39 @@ public class LobbyStore
                 error = ex.Message;
                 return false;
             }
+
+            updatedLobby = CloneLobby(lobby);
+            return true;
+        }
+    }
+
+    public bool TryReturnToLobby(string lobbyCode, string requesterPlayerId, out GameLobby? updatedLobby, out string? error)
+    {
+        lock (_gate)
+        {
+            updatedLobby = null;
+            error = null;
+
+            if (!_lobbiesByCode.TryGetValue(lobbyCode, out var lobby))
+            {
+                error = "Lobby not found.";
+                return false;
+            }
+
+            if (lobby.CreatedByPlayerId != requesterPlayerId)
+            {
+                error = "Only the lobby creator can move the game back to lobby.";
+                return false;
+            }
+
+            if (lobby.CurrentState != GameState.Completed)
+            {
+                error = "Game must be completed before returning to lobby.";
+                return false;
+            }
+
+            lobby.ActiveGame = null;
+            lobby.CurrentState = GameState.Lobby;
 
             updatedLobby = CloneLobby(lobby);
             return true;

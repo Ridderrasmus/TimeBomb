@@ -140,6 +140,70 @@
   align-items: stretch;
 }
 
+.victory-screen-card {
+  justify-content: center;
+}
+
+.victory-panel {
+  align-self: center;
+  width: min(720px, 100%);
+  min-height: 320px;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: clamp(1.1rem, 3vw, 2.2rem);
+  border-width: 2px;
+  border-color: rgba(121, 213, 255, 0.6);
+  background:
+    radial-gradient(circle at 15% 15%, rgba(118, 226, 255, 0.18), transparent 40%),
+    radial-gradient(circle at 85% 82%, rgba(255, 156, 88, 0.18), transparent 42%),
+    var(--surface-card);
+}
+
+.victory-kicker {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.victory-title {
+  margin: 0;
+  font-size: clamp(1.8rem, 5vw, 3rem);
+  line-height: 1.05;
+  color: var(--text-primary);
+  text-wrap: balance;
+}
+
+.victory-subtitle {
+  font-size: 1.05rem;
+  color: var(--text-secondary);
+}
+
+.victory-reason {
+  margin-top: 0.2rem;
+  color: var(--text-muted);
+  max-width: 58ch;
+}
+
+.victory-actions {
+  margin-top: 0.35rem;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.victory-actions .mode-button,
+.victory-actions .submit-button {
+  width: auto;
+  min-width: 150px;
+}
+
+.victory-host-wait {
+  margin-top: 0.1rem;
+}
+
 .lobby-header-row {
   display: flex;
   align-items: center;
@@ -446,6 +510,10 @@ button:disabled {
 
   .game-screen-header {
     align-items: flex-start;
+  }
+
+  .victory-panel {
+    min-height: 260px;
   }
 
   .lobby-debug-button {

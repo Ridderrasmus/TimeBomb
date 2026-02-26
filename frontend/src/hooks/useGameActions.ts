@@ -10,6 +10,7 @@ export interface GameActions {
   saveRules: (draftToSave: RulesDraft, silentIncompleteSelection?: boolean) => Promise<void>;
   toggleSelectedBombColor: (color: WireColor) => void;
   startGame: () => Promise<void>;
+  returnToLobby: () => Promise<void>;
   spawnDebugPlayers: () => Promise<void>;
   revealWire: (targetPlayerId: string) => Promise<void>;
   submitPendingDecision: () => Promise<void>;
@@ -139,6 +140,28 @@ export function useGameActions(session: LobbySession, isDevMode: boolean): GameA
       await session.refreshPrivateState(session.currentLobby.lobbyCode);
     } catch (err) {
       session.setError(err instanceof Error ? err.message : "Unable to start game.");
+    } finally {
+      session.setBusy(false);
+    }
+  }, [session]);
+
+  const returnToLobby = useCallback(async () => {
+    if (!session.currentLobby || !session.isCreator) {
+      return;
+    }
+
+    session.setBusy(true);
+    session.setError(null);
+    try {
+      await session.hubServiceRef.current?.returnToLobby(
+        session.currentLobby.lobbyCode,
+        session.playerId,
+      );
+      await session.refreshPrivateState(session.currentLobby.lobbyCode);
+    } catch (err) {
+      session.setError(
+        err instanceof Error ? err.message : "Unable to return to lobby.",
+      );
     } finally {
       session.setBusy(false);
     }
@@ -276,6 +299,7 @@ export function useGameActions(session: LobbySession, isDevMode: boolean): GameA
     saveRules,
     toggleSelectedBombColor,
     startGame,
+    returnToLobby,
     spawnDebugPlayers,
     revealWire,
     submitPendingDecision,

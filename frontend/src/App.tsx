@@ -4,6 +4,7 @@ import "./App.css";
 import { GameScreen } from "./components/GameScreen";
 import { LobbySetupForm } from "./components/LobbySetupForm";
 import { LobbyScreen } from "./components/LobbyScreen";
+import { VictoryScreen } from "./components/VictoryScreen";
 import {
   AppSessionProvider,
   useAppDevMode,
@@ -14,6 +15,7 @@ import {
   selectActiveGameUiProps,
   selectGameScreenProps,
   selectLobbyScreenProps,
+  selectVictoryScreenProps,
 } from "./selectors/appSelectors";
 
 const DevTestGallery = lazy(() =>
@@ -27,7 +29,16 @@ function AppContent() {
 
   if (session.currentLobby) {
     const activeGameUiProps = selectActiveGameUiProps(session, actions);
+    const victoryScreenProps = selectVictoryScreenProps(session, actions);
     const lobbyState = session.activeLobby?.state ?? session.currentLobby.state;
+
+    if (victoryScreenProps) {
+      return (
+        <div className="app">
+          <VictoryScreen {...victoryScreenProps} />
+        </div>
+      );
+    }
 
     if (lobbyState === "InProgress" && activeGameUiProps) {
       const gameScreenProps = selectGameScreenProps(

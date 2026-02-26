@@ -89,6 +89,10 @@ export class GameHubService {
     await this.connection?.invoke("StartGame", lobbyCode, playerId);
   }
 
+  async returnToLobby(lobbyCode: string, playerId: string) {
+    await this.connection?.invoke("ReturnToLobby", lobbyCode, playerId);
+  }
+
   async revealWire(lobbyCode: string, playerId: string, targetPlayerId: string) {
     await this.connection?.invoke(
       "RevealWire",
