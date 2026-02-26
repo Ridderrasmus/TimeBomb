@@ -308,6 +308,7 @@ export function useGameActions(session: LobbySession, isDevMode: boolean): GameA
       session.setLiveLobby(null);
       session.setPrivateState(null);
       session.setRulesDraft(null);
+      session.regeneratePlayerId();
     } catch (err) {
       session.setError(err instanceof Error ? err.message : "Unable to leave lobby.");
     } finally {

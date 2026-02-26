@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 
 import { GameHubService } from "../services/gameHubService";
+import { lobbyApi } from "../services/lobbyApi";
 import type {
   LobbyResponse,
   LobbyStateDto,
@@ -12,7 +13,10 @@ import type {
 
 const PLAYER_NAME_STORAGE_KEY = "timebomb.playerName";
 const PLAYER_ID_STORAGE_KEY = "timebomb.playerId";
+const ACTIVE_LOBBY_CODE_STORAGE_KEY = "timebomb.activeLobbyCode";
 const isDevMode = import.meta.env.DEV;
+
+const generatePlayerId = () => crypto.randomUUID().replace(/-/g, "");
 
 export type LobbyMode = "create" | "join";
 
@@ -20,6 +24,7 @@ export interface LobbySession {
   playerName: string;
   setPlayerName: Dispatch<SetStateAction<string>>;
   playerId: string;
+  regeneratePlayerId: () => void;
   showGallery: boolean;
   mode: LobbyMode;
   setMode: Dispatch<SetStateAction<LobbyMode>>;
@@ -81,13 +86,13 @@ export function useLobbySession(): LobbySession {
   const [playerName, setPlayerName] = useState(
     () => sessionStorage.getItem(PLAYER_NAME_STORAGE_KEY) ?? "",
   );
-  const [playerId] = useState(() => {
+  const [playerId, setPlayerId] = useState(() => {
     const existing = sessionStorage.getItem(PLAYER_ID_STORAGE_KEY);
     if (existing) {
       return existing;
     }
 
-    const generated = crypto.randomUUID().replace(/-/g, "");
+    const generated = generatePlayerId();
     sessionStorage.setItem(PLAYER_ID_STORAGE_KEY, generated);
     return generated;
   });
@@ -106,6 +111,7 @@ export function useLobbySession(): LobbySession {
   const [selectedPendingDecisionColor, setSelectedPendingDecisionColor] =
     useState<WireColor | null>(null);
   const hubServiceRef = useRef<GameHubService | null>(null);
+  const hasAttemptedAutoRejoinRef = useRef(false);
 
   const activeLobby = liveLobby;
   const displayedPlayers =
@@ -216,9 +222,24 @@ export function useLobbySession(): LobbySession {
     [playerId],
   );
 
+  const regeneratePlayerId = useCallback(() => {
+    const nextPlayerId = generatePlayerId();
+    sessionStorage.setItem(PLAYER_ID_STORAGE_KEY, nextPlayerId);
+    setPlayerId(nextPlayerId);
+  }, []);
+
   useEffect(() => {
     sessionStorage.setItem(PLAYER_NAME_STORAGE_KEY, playerName);
   }, [playerName]);
+
+  useEffect(() => {
+    if (currentLobby?.lobbyCode) {
+      sessionStorage.setItem(ACTIVE_LOBBY_CODE_STORAGE_KEY, currentLobby.lobbyCode);
+      return;
+    }
+
+    sessionStorage.removeItem(ACTIVE_LOBBY_CODE_STORAGE_KEY);
+  }, [currentLobby?.lobbyCode]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -231,6 +252,44 @@ export function useLobbySession(): LobbySession {
 
     setShowGallery(isDevMode && params.get("mode") === "gallery");
   }, []);
+
+  useEffect(() => {
+    if (hasAttemptedAutoRejoinRef.current || currentLobby) {
+      return;
+    }
+
+    hasAttemptedAutoRejoinRef.current = true;
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("join")?.trim()) {
+      return;
+    }
+
+    const savedLobbyCode = sessionStorage.getItem(ACTIVE_LOBBY_CODE_STORAGE_KEY)?.trim();
+    if (!savedLobbyCode || !playerName.trim()) {
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+
+    void lobbyApi
+      .joinLobby(savedLobbyCode, {
+        playerName: playerName.trim(),
+        playerId,
+      })
+      .then((lobby) => {
+        setCurrentLobby(lobby);
+        setMode("join");
+        setLobbyCode(savedLobbyCode.toUpperCase());
+      })
+      .catch(() => {
+        sessionStorage.removeItem(ACTIVE_LOBBY_CODE_STORAGE_KEY);
+      })
+      .finally(() => {
+        setBusy(false);
+      });
+  }, [currentLobby, playerId, playerName]);
 
   useEffect(() => {
     if (!currentLobby) {
@@ -322,6 +381,7 @@ export function useLobbySession(): LobbySession {
     playerName,
     setPlayerName,
     playerId,
+    regeneratePlayerId,
     showGallery,
     mode,
     setMode,
