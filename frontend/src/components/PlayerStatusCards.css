@@ -21,6 +21,31 @@
   animation-delay: calc(var(--seat-index, 0) * 50ms);
 }
 
+.player-status-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.player-status-card.has-trailing-action {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.player-status-trailing-action {
+  display: flex;
+  align-items: center;
+}
+
+.player-status-trailing-action .mode-button {
+  width: auto;
+  min-width: 82px;
+  padding: 0.44rem 0.62rem;
+}
+
 .player-status-card.is-actionable {
   cursor: default;
 }
@@ -196,6 +221,15 @@
 @media (max-width: 760px) {
   .player-status-grid {
     grid-template-columns: 1fr;
+  }
+
+  .player-status-card.has-trailing-action {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .player-status-trailing-action {
+    justify-content: flex-end;
   }
 }
 

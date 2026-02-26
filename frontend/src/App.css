@@ -436,17 +436,6 @@ button:disabled {
   gap: 0.42rem;
 }
 
-.lobby-kick-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.42rem;
-}
-
-.lobby-kick-controls .mode-button {
-  width: auto;
-  min-width: 140px;
-}
-
 .action-row .mode-button {
   width: auto;
   min-width: 110px;
@@ -496,7 +485,39 @@ button:disabled {
   accent-color: var(--focus-ring);
 }
 
-.lobby-rules-markdown {
+.mode-button.lobby-side-rules-toggle {
+  position: fixed;
+  top: 0.8rem;
+  left: 0.65rem;
+  width: fit-content;
+  min-width: 126px;
+  z-index: 13;
+  box-shadow: 0 8px 16px rgba(8, 14, 37, 0.3);
+}
+
+.lobby-side-rules-panel {
+  position: fixed;
+  top: 0.8rem;
+  bottom: 0.8rem;
+  left: 0.8rem;
+  width: min(420px, 36vw);
+  z-index: 12;
+}
+
+.lobby-side-rules-content {
+  height: 100%;
+  overflow-y: auto;
+  gap: 0.55rem;
+}
+
+.mode-button.lobby-side-rules-close {
+  width: fit-content;
+  min-width: 86px;
+  align-self: flex-end;
+  margin-bottom: 0.2rem;
+}
+
+.lobby-side-rules-markdown {
   margin: 0;
   padding: 0.6rem;
   border-radius: 10px;
@@ -508,60 +529,60 @@ button:disabled {
   line-height: 1.4;
 }
 
-.lobby-rules-markdown > *:first-child {
+.lobby-side-rules-markdown > *:first-child {
   margin-top: 0;
 }
 
-.lobby-rules-markdown > *:last-child {
+.lobby-side-rules-markdown > *:last-child {
   margin-bottom: 0;
 }
 
-.lobby-rules-markdown h1,
-.lobby-rules-markdown h2,
-.lobby-rules-markdown h3,
-.lobby-rules-markdown h4 {
+.lobby-side-rules-markdown h1,
+.lobby-side-rules-markdown h2,
+.lobby-side-rules-markdown h3,
+.lobby-side-rules-markdown h4 {
   color: var(--text-primary);
   line-height: 1.2;
 }
 
-.lobby-rules-markdown h1 {
+.lobby-side-rules-markdown h1 {
   font-size: 1.05rem;
 }
 
-.lobby-rules-markdown h2 {
+.lobby-side-rules-markdown h2 {
   font-size: 0.98rem;
 }
 
-.lobby-rules-markdown h3,
-.lobby-rules-markdown h4 {
+.lobby-side-rules-markdown h3,
+.lobby-side-rules-markdown h4 {
   font-size: 0.92rem;
 }
 
-.lobby-rules-markdown p,
-.lobby-rules-markdown ul,
-.lobby-rules-markdown ol,
-.lobby-rules-markdown blockquote,
-.lobby-rules-markdown pre {
+.lobby-side-rules-markdown p,
+.lobby-side-rules-markdown ul,
+.lobby-side-rules-markdown ol,
+.lobby-side-rules-markdown blockquote,
+.lobby-side-rules-markdown pre {
   margin: 0.5rem 0;
 }
 
-.lobby-rules-markdown ul,
-.lobby-rules-markdown ol {
+.lobby-side-rules-markdown ul,
+.lobby-side-rules-markdown ol {
   padding-left: 1.15rem;
 }
 
-.lobby-rules-markdown li + li {
+.lobby-side-rules-markdown li + li {
   margin-top: 0.2rem;
 }
 
-.lobby-rules-markdown code {
+.lobby-side-rules-markdown code {
   border-radius: 6px;
   border: 1px solid var(--border-soft);
   background: rgba(126, 149, 239, 0.12);
   padding: 0.08rem 0.28rem;
 }
 
-.lobby-rules-markdown pre code {
+.lobby-side-rules-markdown pre code {
   display: block;
   overflow-x: auto;
   padding: 0.45rem 0.55rem;
@@ -612,5 +633,18 @@ button:disabled {
   .lobby-card > .submit-button {
     width: 100%;
     max-width: none;
+  }
+
+  .mode-button.lobby-side-rules-toggle {
+    left: 0.45rem;
+    top: 0.45rem;
+    min-width: 112px;
+  }
+
+  .lobby-side-rules-panel {
+    top: 0.45rem;
+    bottom: 0.45rem;
+    left: 0.45rem;
+    width: min(460px, calc(100vw - 0.9rem));
   }
 }

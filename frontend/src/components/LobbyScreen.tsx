@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 import type {
   LobbyStateName,
@@ -60,6 +62,61 @@ export function LobbyScreen({
   const [inviteCopyStatus, setInviteCopyStatus] = useState<
     "idle" | "copied" | "failed"
   >("idle");
+  const [isRulesDrawerOpen, setIsRulesDrawerOpen] = useState(false);
+  const [rulesMarkdown, setRulesMarkdown] = useState<string | null>(null);
+  const [rulesMarkdownLoading, setRulesMarkdownLoading] = useState(false);
+  const [rulesMarkdownError, setRulesMarkdownError] = useState<string | null>(null);
+  const rulesVariantSlug = rulesDraft?.variant.toLowerCase();
+  const rulesMarkdownPath = rulesVariantSlug
+    ? `/rules/${rulesVariantSlug}-game-rules.md`
+    : null;
+
+  useEffect(() => {
+    setRulesMarkdown(null);
+    setRulesMarkdownError(null);
+  }, [rulesVariantSlug]);
+
+  useEffect(() => {
+    if (!isRulesDrawerOpen || !rulesMarkdownPath) {
+      return;
+    }
+
+    const controller = new AbortController();
+    setRulesMarkdownLoading(true);
+    setRulesMarkdownError(null);
+
+    fetch(rulesMarkdownPath, { cache: "no-store", signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error("Unable to load rules document.");
+        }
+
+        return response.text();
+      })
+      .then((markdownText) => {
+        setRulesMarkdown(markdownText);
+      })
+      .catch((loadError) => {
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        setRulesMarkdownError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Unable to load rules document.",
+        );
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setRulesMarkdownLoading(false);
+        }
+      });
+
+    return () => {
+      controller.abort();
+    };
+  }, [isRulesDrawerOpen, rulesMarkdownPath]);
 
   const copyInviteLink = async () => {
     const inviteUrl = new URL(window.location.href);
@@ -78,8 +135,45 @@ export function LobbyScreen({
   };
 
   return (
-    <main className="card lobby-card" aria-label="Lobby screen">
-      <div className="lobby-header-row">
+    <>
+      {lobbyState === "Lobby" && rulesDraft && (
+        <>
+          {!isRulesDrawerOpen && (
+            <button
+              type="button"
+              className="mode-button lobby-side-rules-toggle"
+              onClick={() => setIsRulesDrawerOpen(true)}
+            >
+              Game rules
+            </button>
+          )}
+          {isRulesDrawerOpen && (
+            <aside className="lobby-side-rules-panel" aria-label="Game rules">
+              <div className="result lobby-side-rules-content">
+                <button
+                  type="button"
+                  className="mode-button lobby-side-rules-close"
+                  onClick={() => setIsRulesDrawerOpen(false)}
+                >
+                  Close
+                </button>
+                <div className="lobby-side-rules-markdown" aria-label="Rules markdown">
+                  {rulesMarkdownLoading ? (
+                    "Loading rules markdown..."
+                  ) : rulesMarkdownError ? (
+                    rulesMarkdownError
+                  ) : (
+                    <Markdown remarkPlugins={[remarkGfm]}>{rulesMarkdown ?? ""}</Markdown>
+                  )}
+                </div>
+              </div>
+            </aside>
+          )}
+        </>
+      )}
+
+      <main className="card lobby-card" aria-label="Lobby screen">
+        <div className="lobby-header-row">
         <h1>{lobbyName}</h1>
         {showDebugSpawnButton && onDebugSpawnPlayers && (
           <button
@@ -191,6 +285,7 @@ export function LobbyScreen({
           {error}
         </p>
       )}
-    </main>
+      </main>
+    </>
   );
 }
