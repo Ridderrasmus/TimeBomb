@@ -67,18 +67,6 @@ public class LobbyStore
                 return false;
             }
 
-            if (lobby.CurrentState != GameState.Lobby)
-            {
-                error = "Cannot join a lobby that is already in progress.";
-                return false;
-            }
-
-            if (lobby.Players.Count >= MaxPlayers)
-            {
-                error = "Lobby is full.";
-                return false;
-            }
-
             var normalizedPlayerId = string.IsNullOrWhiteSpace(playerId)
                 ? Guid.NewGuid().ToString("N")
                 : playerId;
@@ -89,6 +77,18 @@ public class LobbyStore
                 existingById.Name = playerName.Trim();
                 updatedLobby = CloneLobby(lobby);
                 return true;
+            }
+
+            if (lobby.CurrentState != GameState.Lobby)
+            {
+                error = "Cannot join a lobby that is already in progress.";
+                return false;
+            }
+
+            if (lobby.Players.Count >= MaxPlayers)
+            {
+                error = "Lobby is full.";
+                return false;
             }
 
             lobby.Players.Add(new Player
