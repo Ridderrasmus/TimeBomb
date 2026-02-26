@@ -34,8 +34,14 @@ export function VictoryScreen({
   onReturnToLobby,
   onLeaveLobby,
 }: VictoryScreenProps) {
-  const hasWinner = !!winner;
-  const isMyTeamWinner = hasWinner && myTeam === winner;
+  const resolvedWinner =
+    outcomeReason === "DefuseObjectiveComplete"
+      ? "Sherlock"
+      : outcomeReason === "BombExploded" || outcomeReason === "RoundLimitReached"
+        ? "Moriarty"
+        : winner ?? null;
+  const hasWinner = !!resolvedWinner;
+  const isMyTeamWinner = hasWinner && myTeam === resolvedWinner;
 
   return (
     <main className="card game-screen-card victory-screen-card" aria-label="Victory screen">
@@ -58,7 +64,7 @@ export function VictoryScreen({
       <section className="result victory-panel" aria-live="polite">
         <p className="victory-kicker">Final result</p>
         <h2 className="victory-title">
-          {hasWinner ? `${winner} Team Wins` : "No Winning Team"}
+          {hasWinner ? `${resolvedWinner} Team Wins` : "No Winning Team"}
         </h2>
         <p className="victory-subtitle">
           {hasWinner

@@ -2,6 +2,7 @@ import { useState } from "react";
 import "./TestGallery.css";
 import { ActiveGameUi } from "./components/ActiveGameUi";
 import { LobbyScreen } from "./components/LobbyScreen";
+import { VictoryScreen } from "./components/VictoryScreen";
 import { WireVisualCard } from "./components/WireVisualCard";
 import { TurnStateProminence } from "./components/TurnStateProminence";
 import { PlayerStatusCards } from "./components/PlayerStatusCards";
@@ -481,9 +482,128 @@ function WireHistoryShowcase() {
   );
 }
 
+function VictoryShowcase() {
+  const [isCreator, setIsCreator] = useState(true);
+  const [hubReady, setHubReady] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [winner, setWinner] = useState<"Sherlock" | "Moriarty" | "none">("Sherlock");
+  const [myTeam, setMyTeam] = useState<"Sherlock" | "Moriarty" | "none">("Sherlock");
+  const [outcomeReason, setOutcomeReason] = useState<
+    "BombExploded" | "DefuseObjectiveComplete" | "RoundLimitReached"
+  >("DefuseObjectiveComplete");
+  const [mockActionMessage, setMockActionMessage] = useState<string | null>(null);
+
+  return (
+    <div className="gallery-section">
+      <h2>Victory UI</h2>
+      <p className="gallery-hint">
+        Final game summary screen with host controls for replay and lobby return.
+      </p>
+
+      <div className="gallery-controls">
+        <label className="check-row" htmlFor="victory-scene-is-creator">
+          <input
+            id="victory-scene-is-creator"
+            type="checkbox"
+            checked={isCreator}
+            onChange={(event) => setIsCreator(event.target.checked)}
+          />
+          You are the lobby creator
+        </label>
+        <label className="check-row" htmlFor="victory-scene-hub-ready">
+          <input
+            id="victory-scene-hub-ready"
+            type="checkbox"
+            checked={hubReady}
+            onChange={(event) => setHubReady(event.target.checked)}
+          />
+          Hub connected
+        </label>
+        <label className="check-row" htmlFor="victory-scene-busy">
+          <input
+            id="victory-scene-busy"
+            type="checkbox"
+            checked={busy}
+            onChange={(event) => setBusy(event.target.checked)}
+          />
+          Busy state
+        </label>
+        <label>
+          Winner:
+          <select
+            value={winner}
+            onChange={(event) =>
+              setWinner(event.target.value as "Sherlock" | "Moriarty" | "none")
+            }
+          >
+            <option value="Sherlock">Sherlock</option>
+            <option value="Moriarty">Moriarty</option>
+            <option value="none">No winner</option>
+          </select>
+        </label>
+        <label>
+          My team:
+          <select
+            value={myTeam}
+            onChange={(event) =>
+              setMyTeam(event.target.value as "Sherlock" | "Moriarty" | "none")
+            }
+          >
+            <option value="Sherlock">Sherlock</option>
+            <option value="Moriarty">Moriarty</option>
+            <option value="none">Unknown</option>
+          </select>
+        </label>
+        <label>
+          Outcome:
+          <select
+            value={outcomeReason}
+            onChange={(event) =>
+              setOutcomeReason(
+                event.target.value as
+                  | "BombExploded"
+                  | "DefuseObjectiveComplete"
+                  | "RoundLimitReached",
+              )
+            }
+          >
+            <option value="DefuseObjectiveComplete">Defuse objective complete</option>
+            <option value="BombExploded">Bomb exploded</option>
+            <option value="RoundLimitReached">Round limit reached</option>
+          </select>
+        </label>
+      </div>
+
+      <VictoryScreen
+        lobbyName="Gallery Lobby"
+        winner={winner === "none" ? null : winner}
+        outcomeReason={outcomeReason}
+        myTeam={myTeam === "none" ? null : myTeam}
+        canPlayAgain={isCreator}
+        canReturnToLobby={isCreator}
+        hubReady={hubReady}
+        busy={busy}
+        onPlayAgain={() => setMockActionMessage("Mock action: Play again clicked")}
+        onReturnToLobby={() =>
+          setMockActionMessage("Mock action: Back to lobby clicked")
+        }
+        onLeaveLobby={() => setMockActionMessage("Mock action: Leave lobby clicked")}
+      />
+
+      {mockActionMessage && <p className="subtle">{mockActionMessage}</p>}
+    </div>
+  );
+}
+
 export function TestGallery() {
   const [activeScene, setActiveScene] = useState<
-    "wires" | "turn-banner" | "players" | "history" | "lobby" | "full-game"
+    | "wires"
+    | "turn-banner"
+    | "players"
+    | "history"
+    | "lobby"
+    | "victory"
+    | "full-game"
   >("wires");
 
   return (
@@ -525,6 +645,12 @@ export function TestGallery() {
           Lobby UI
         </button>
         <button
+          className={activeScene === "victory" ? "active" : ""}
+          onClick={() => setActiveScene("victory")}
+        >
+          Victory UI
+        </button>
+        <button
           className={activeScene === "full-game" ? "active" : ""}
           onClick={() => setActiveScene("full-game")}
         >
@@ -538,6 +664,7 @@ export function TestGallery() {
         {activeScene === "players" && <PlayerCardsShowcase />}
         {activeScene === "history" && <WireHistoryShowcase />}
         {activeScene === "lobby" && <LobbyShowcase />}
+        {activeScene === "victory" && <VictoryShowcase />}
         {activeScene === "full-game" && <FullGameShowcase />}
       </main>
     </div>
