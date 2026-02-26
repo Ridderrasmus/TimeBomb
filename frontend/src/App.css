@@ -496,6 +496,77 @@ button:disabled {
   accent-color: var(--focus-ring);
 }
 
+.lobby-rules-markdown {
+  margin: 0;
+  padding: 0.6rem;
+  border-radius: 10px;
+  border: 1px solid var(--border-soft);
+  background: var(--surface-tile);
+  color: var(--text-secondary);
+  white-space: normal;
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.lobby-rules-markdown > *:first-child {
+  margin-top: 0;
+}
+
+.lobby-rules-markdown > *:last-child {
+  margin-bottom: 0;
+}
+
+.lobby-rules-markdown h1,
+.lobby-rules-markdown h2,
+.lobby-rules-markdown h3,
+.lobby-rules-markdown h4 {
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.lobby-rules-markdown h1 {
+  font-size: 1.05rem;
+}
+
+.lobby-rules-markdown h2 {
+  font-size: 0.98rem;
+}
+
+.lobby-rules-markdown h3,
+.lobby-rules-markdown h4 {
+  font-size: 0.92rem;
+}
+
+.lobby-rules-markdown p,
+.lobby-rules-markdown ul,
+.lobby-rules-markdown ol,
+.lobby-rules-markdown blockquote,
+.lobby-rules-markdown pre {
+  margin: 0.5rem 0;
+}
+
+.lobby-rules-markdown ul,
+.lobby-rules-markdown ol {
+  padding-left: 1.15rem;
+}
+
+.lobby-rules-markdown li + li {
+  margin-top: 0.2rem;
+}
+
+.lobby-rules-markdown code {
+  border-radius: 6px;
+  border: 1px solid var(--border-soft);
+  background: rgba(126, 149, 239, 0.12);
+  padding: 0.08rem 0.28rem;
+}
+
+.lobby-rules-markdown pre code {
+  display: block;
+  overflow-x: auto;
+  padding: 0.45rem 0.55rem;
+}
+
 @media (max-width: 760px) {
   .lobby-card {
     grid-template-columns: 1fr;

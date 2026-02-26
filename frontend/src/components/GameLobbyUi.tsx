@@ -1,6 +1,8 @@
 import { PlayerStatusCards } from "./PlayerStatusCards";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type {
   GameVariant,
   LobbyStateName,
@@ -45,9 +47,64 @@ export function GameLobbyUi({
   onStartGame,
 }: GameLobbyUiProps) {
   const [variantDisclaimer, setVariantDisclaimer] = useState<string | null>(null);
+  const [isRulesViewerOpen, setIsRulesViewerOpen] = useState(false);
+  const [rulesMarkdown, setRulesMarkdown] = useState<string | null>(null);
+  const [rulesMarkdownLoading, setRulesMarkdownLoading] = useState(false);
+  const [rulesMarkdownError, setRulesMarkdownError] = useState<string | null>(null);
   const canKickPlayers = isCreator && lobbyState === "Lobby";
   const kickablePlayers = players.filter((player) => player.id !== currentPlayerId);
   const hasValidPlayerCount = players.length >= 4 && players.length <= 6;
+  const rulesVariantSlug = rulesDraft?.variant.toLowerCase();
+  const rulesMarkdownPath = rulesVariantSlug
+    ? `/rules/${rulesVariantSlug}-game-rules.md`
+    : null;
+
+  useEffect(() => {
+    setRulesMarkdown(null);
+    setRulesMarkdownError(null);
+  }, [rulesVariantSlug]);
+
+  useEffect(() => {
+    if (!isRulesViewerOpen || !rulesMarkdownPath) {
+      return;
+    }
+
+    const controller = new AbortController();
+    setRulesMarkdownLoading(true);
+    setRulesMarkdownError(null);
+
+    fetch(rulesMarkdownPath, { cache: "no-store", signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error("Unable to load rules document.");
+        }
+
+        return response.text();
+      })
+      .then((markdownText) => {
+        setRulesMarkdown(markdownText);
+      })
+      .catch((loadError) => {
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        setRulesMarkdownError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Unable to load rules document.",
+        );
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setRulesMarkdownLoading(false);
+        }
+      });
+
+    return () => {
+      controller.abort();
+    };
+  }, [isRulesViewerOpen, rulesMarkdownPath]);
 
   return (
     <>
@@ -116,6 +173,26 @@ export function GameLobbyUi({
           </select>
 
           {variantDisclaimer && <p className="subtle">{variantDisclaimer}</p>}
+
+          <button
+            type="button"
+            className="mode-button"
+            onClick={() => setIsRulesViewerOpen((current) => !current)}
+          >
+            {isRulesViewerOpen ? "Hide full rules" : "Read full rules"}
+          </button>
+
+          {isRulesViewerOpen && (
+            <div className="lobby-rules-markdown" aria-label="Rules markdown">
+              {rulesMarkdownLoading ? (
+                "Loading rules markdown..."
+              ) : rulesMarkdownError ? (
+                rulesMarkdownError
+              ) : (
+                <Markdown remarkPlugins={[remarkGfm]}>{rulesMarkdown ?? ""}</Markdown>
+              )}
+            </div>
+          )}
 
           <label className="check-row" htmlFor="randomize">
             <input
