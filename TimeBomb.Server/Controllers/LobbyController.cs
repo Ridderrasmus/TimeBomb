@@ -97,6 +97,35 @@ namespace TimeBomb.Server.Controllers
             return Ok(ToLobbyResponse(lobby));
         }
 
+        [HttpPost("{lobbyCode}/kick")]
+        public async Task<ActionResult<LobbyResponse>> KickPlayer([FromRoute] string lobbyCode, [FromBody] KickPlayerRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.RequesterPlayerId))
+            {
+                return ValidationProblem("Requester player id is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(request.TargetPlayerId))
+            {
+                return ValidationProblem("Target player id is required.");
+            }
+
+            var success = _lobbyStore.TryKickPlayer(
+                lobbyCode,
+                request.RequesterPlayerId,
+                request.TargetPlayerId,
+                out var lobby,
+                out var error);
+
+            if (!success)
+            {
+                return Problem(detail: error, statusCode: StatusCodes.Status400BadRequest);
+            }
+
+            await BroadcastLobbyStateAsync(lobby!);
+            return Ok(ToLobbyResponse(lobby!));
+        }
+
         [HttpDelete("{lobbyCode}")]
         public async Task<IActionResult> Delete([FromRoute] string lobbyCode)
         {
@@ -219,6 +248,7 @@ namespace TimeBomb.Server.Controllers
         public sealed record CreateLobbyRequest(string? LobbyName, string PlayerName, string? PlayerId);
         public sealed record JoinLobbyRequest(string PlayerName, string? PlayerId);
         public sealed record LeaveLobbyRequest(string PlayerId);
+        public sealed record KickPlayerRequest(string RequesterPlayerId, string TargetPlayerId);
         public sealed record UpdateLobbyRulesRequest(string PlayerId, GameVariant Variant, bool RandomizeCardColors, List<WireColor>? SelectedBombColors);
         public sealed record StartLobbyRequest(string PlayerId);
         public sealed record LobbySummaryResponse(string LobbyCode, string Name, GameState State, int PlayerCount);

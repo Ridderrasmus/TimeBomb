@@ -81,4 +81,14 @@ export const lobbyApi = {
       throw new Error(await parseErrorMessage(response));
     }
   },
+
+  async kickPlayer(lobbyCode: string, requesterPlayerId: string, targetPlayerId: string) {
+    const response = await fetch(`/api/lobby/${lobbyCode}/kick`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ requesterPlayerId, targetPlayerId }),
+    });
+
+    await ensureSuccess(response);
+  },
 };

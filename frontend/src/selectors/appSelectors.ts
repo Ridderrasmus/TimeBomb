@@ -1,6 +1,7 @@
 import type { ActiveGameUiProps } from "../components/ActiveGameUi";
 import type { GameScreenProps } from "../components/GameScreen";
 import type { LobbyScreenProps } from "../components/LobbyScreen";
+import type { VictoryScreenProps } from "../components/VictoryScreen";
 import type { GameActions } from "../hooks/useGameActions";
 import type { LobbySession } from "../hooks/useLobbySession";
 import { ALL_WIRE_COLORS } from "../types/game";
@@ -26,9 +27,12 @@ export const selectLobbyScreenProps = (
   allWireColors: ALL_WIRE_COLORS,
   onRulesDraftChange: (nextDraft) => {
     session.setRulesDraft(nextDraft);
-    void actions.saveRules(nextDraft, true);
+    void actions.saveRules(nextDraft);
   },
   onToggleSelectedBombColor: actions.toggleSelectedBombColor,
+  onKickPlayer: (playerId) => {
+    void actions.kickPlayer(playerId);
+  },
   onStartGame: () => {
     void actions.startGame();
   },
@@ -103,3 +107,32 @@ export const selectGameScreenProps = (
   },
   activeGameUiProps,
 });
+
+export const selectVictoryScreenProps = (
+  session: LobbySession,
+  actions: GameActions,
+): VictoryScreenProps | null => {
+  if (!session.activeGame?.outcome.isComplete) {
+    return null;
+  }
+
+  return {
+    lobbyName: session.activeLobby?.name ?? session.currentLobby?.name ?? "",
+    winner: session.activeGame.outcome.winner,
+    outcomeReason: session.activeGame.outcome.reason,
+    myTeam: session.privateState?.team ?? null,
+    canPlayAgain: session.isCreator,
+    canReturnToLobby: session.isCreator,
+    hubReady: session.hubReady,
+    busy: session.busy,
+    onPlayAgain: () => {
+      void actions.startGame();
+    },
+    onReturnToLobby: () => {
+      void actions.returnToLobby();
+    },
+    onLeaveLobby: () => {
+      void actions.leaveLobby();
+    },
+  };
+};

@@ -62,6 +62,17 @@ public class GameHub : Hub
 		await Clients.Group(HubGroups.Lobby(lobbyCode)).SendAsync("LobbyStateUpdated", LobbyStateMapper.ToDto(updatedLobby!));
 	}
 
+	public async Task ReturnToLobby(string lobbyCode, string playerId)
+	{
+		var success = _lobbyStore.TryReturnToLobby(lobbyCode, playerId, out var updatedLobby, out var error);
+		if (!success)
+		{
+			throw new HubException(error ?? "Unable to return to lobby.");
+		}
+
+		await Clients.Group(HubGroups.Lobby(lobbyCode)).SendAsync("LobbyStateUpdated", LobbyStateMapper.ToDto(updatedLobby!));
+	}
+
 	public async Task RevealWire(
 		string lobbyCode,
 		string playerId,

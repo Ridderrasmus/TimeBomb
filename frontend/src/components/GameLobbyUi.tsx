@@ -24,6 +24,7 @@ interface GameLobbyUiProps {
   allWireColors: WireColor[];
   onRulesDraftChange: (nextDraft: RulesDraft) => void;
   onToggleSelectedBombColor: (color: WireColor) => void;
+  onKickPlayer: (playerId: string) => void;
   onStartGame: () => void;
 }
 
@@ -40,9 +41,12 @@ export function GameLobbyUi({
   allWireColors,
   onRulesDraftChange,
   onToggleSelectedBombColor,
+  onKickPlayer,
   onStartGame,
 }: GameLobbyUiProps) {
   const [variantDisclaimer, setVariantDisclaimer] = useState<string | null>(null);
+  const canKickPlayers = isCreator && lobbyState === "Lobby";
+  const hasValidPlayerCount = players.length >= 4 && players.length <= 6;
 
   return (
     <>
@@ -56,6 +60,23 @@ export function GameLobbyUi({
             currentPlayerId={currentPlayerId}
             showWireCounts={false}
             circularLayout={false}
+            renderTrailingAction={(player) => {
+              if (!canKickPlayers || player.id === currentPlayerId) {
+                return null;
+              }
+
+              return (
+                <button
+                  type="button"
+                  className="mode-button"
+                  disabled={busy}
+                  onClick={() => onKickPlayer(player.id)}
+                  aria-label={`Kick ${player.name}`}
+                >
+                  Kick
+                </button>
+              );
+            }}
           />
         </section>
       )}
@@ -146,14 +167,19 @@ export function GameLobbyUi({
       )}
 
       {lobbyState === "Lobby" && isCreator ? (
-        <button
-          type="button"
-          className="submit-button"
-          onClick={onStartGame}
-          disabled={busy || !hubReady}
-        >
-          Start game
-        </button>
+        <>
+          <button
+            type="button"
+            className="submit-button"
+            onClick={onStartGame}
+            disabled={busy || !hubReady || !hasValidPlayerCount}
+          >
+            Start game
+          </button>
+          {!hasValidPlayerCount && (
+            <p className="subtle">Game can only start with 4 to 6 players.</p>
+          )}
+        </>
       ) : lobbyState === "Lobby" ? (
         <p className="subtle">Only the creator can start the game.</p>
       ) : null}

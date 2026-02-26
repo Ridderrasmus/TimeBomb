@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 import "./PlayerStatusCards.css";
 
@@ -17,6 +17,7 @@ interface PlayerStatusCardsProps {
   circularLayout?: boolean;
   onPlayerClick?: (playerId: string) => void;
   clickablePlayerIds?: string[];
+  renderTrailingAction?: (player: PlayerSummary) => ReactNode;
 }
 
 export function PlayerStatusCards({
@@ -27,6 +28,7 @@ export function PlayerStatusCards({
   circularLayout = false,
   onPlayerClick,
   clickablePlayerIds,
+  renderTrailingAction,
 }: PlayerStatusCardsProps) {
   const clickableSet = new Set(clickablePlayerIds ?? []);
   const useCircularLayout = circularLayout && players.length > 2;
@@ -63,11 +65,12 @@ export function PlayerStatusCards({
               "--seat-index": index,
             } as CSSProperties)
           : undefined;
+        const trailingAction = renderTrailingAction?.(player);
 
         return (
           <li
             key={player.id}
-            className={`player-status-card${isActive ? " is-active" : ""}${isForcedTarget ? " is-forced" : ""}${onPlayerClick ? " is-actionable" : ""}${isClickable ? " is-clickable" : ""}`}
+            className={`player-status-card${isActive ? " is-active" : ""}${isForcedTarget ? " is-forced" : ""}${onPlayerClick ? " is-actionable" : ""}${isClickable ? " is-clickable" : ""}${trailingAction ? " has-trailing-action" : ""}`}
             style={seatStyle}
             onClick={isClickable ? () => onPlayerClick(player.id) : undefined}
             onKeyDown={
@@ -87,26 +90,31 @@ export function PlayerStatusCards({
             {useCircularLayout && isActive && (
               <span className="player-status-turn-token" aria-hidden="true" />
             )}
-            <div className="player-status-head">
-              <p className="player-status-name">
-                {player.name}
-                {isSelf ? " (You)" : ""}
-              </p>
-              <div className="player-status-badges">
-                {isActive && <span className="player-status-badge active">Active</span>}
-                {isForcedTarget && (
-                  <span className="player-status-badge forced">Forced target</span>
-                )}
+            <div className="player-status-body">
+              <div className="player-status-head">
+                <p className="player-status-name">
+                  {player.name}
+                  {isSelf ? " (You)" : ""}
+                </p>
+                <div className="player-status-badges">
+                  {isActive && <span className="player-status-badge active">Active</span>}
+                  {isForcedTarget && (
+                    <span className="player-status-badge forced">Forced target</span>
+                  )}
+                </div>
               </div>
+              {useCircularLayout && (
+                <p className="player-status-seat">Seat {index + 1}</p>
+              )}
+              <p className="player-status-detail">
+                {showWireCounts
+                  ? `${player.remainingWireCount} wire${player.remainingWireCount === 1 ? "" : "s"} remaining`
+                  : "Waiting in lobby"}
+              </p>
             </div>
-            {useCircularLayout && (
-              <p className="player-status-seat">Seat {index + 1}</p>
+            {trailingAction && (
+              <div className="player-status-trailing-action">{trailingAction}</div>
             )}
-            <p className="player-status-detail">
-              {showWireCounts
-                ? `${player.remainingWireCount} wire${player.remainingWireCount === 1 ? "" : "s"} remaining`
-                : "Waiting in lobby"}
-            </p>
           </li>
         );
       })}
