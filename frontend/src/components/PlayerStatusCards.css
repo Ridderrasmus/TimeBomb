@@ -118,6 +118,68 @@
   color: var(--text-muted);
 }
 
+.player-mini-hand {
+  position: relative;
+  width: 3rem;
+  height: 1.65rem;
+  margin-top: 0.12rem;
+}
+
+.player-mini-hand-card {
+  --mini-index: 0;
+  --mini-spread-x: calc(var(--mini-index) * 0.45rem);
+  --mini-spread-rot: calc((var(--mini-index) - 2) * 2deg);
+  position: absolute;
+  top: 0.1rem;
+  left: 0.15rem;
+  width: 1rem;
+  height: 1.4rem;
+  border-radius: 4px;
+  border: 1px solid rgba(154, 172, 255, 0.58);
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(161, 176, 255, 0.9),
+      rgba(161, 176, 255, 0.9) 3px,
+      rgba(113, 128, 220, 0.9) 3px,
+      rgba(113, 128, 220, 0.9) 6px
+    );
+  box-shadow: 0 5px 12px rgba(17, 24, 58, 0.26);
+  transform: translateX(var(--mini-spread-x)) rotate(var(--mini-spread-rot));
+  transform-origin: center bottom;
+  animation: miniHandDealIn 220ms ease both;
+  animation-delay: calc(var(--mini-index) * 34ms);
+}
+
+.player-mini-hand.is-ready .player-mini-hand-card {
+  animation: miniHandHideStack 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--mini-index) * 36ms);
+}
+
+@keyframes miniHandDealIn {
+  from {
+    opacity: 0;
+    transform: translateX(var(--mini-spread-x)) translateY(5px) scale(0.92)
+      rotate(var(--mini-spread-rot));
+  }
+  to {
+    opacity: 1;
+    transform: translateX(var(--mini-spread-x)) rotate(var(--mini-spread-rot));
+  }
+}
+
+@keyframes miniHandHideStack {
+  from {
+    opacity: 1;
+    transform: translateX(var(--mini-spread-x)) rotate(var(--mini-spread-rot));
+  }
+  to {
+    opacity: 0.92;
+    transform: translateX(calc(var(--mini-index) * 0.14rem))
+      translateY(calc(var(--mini-index) * -0.08rem)) rotate(0deg);
+  }
+}
+
 .player-status-grid.is-circular {
   --table-radius: clamp(9.6rem, 25vw, 14rem);
   --seat-count: 1;
@@ -236,5 +298,10 @@
 @media (prefers-reduced-motion: reduce) {
   .player-status-turn-token {
     animation: none !important;
+  }
+
+  .player-mini-hand-card {
+    animation: none !important;
+    transform: translateX(calc(var(--mini-index) * 0.12rem));
   }
 }

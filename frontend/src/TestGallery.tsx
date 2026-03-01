@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./TestGallery.css";
 import { ActiveGameUi } from "./components/ActiveGameUi";
 import { LobbyScreen } from "./components/LobbyScreen";
@@ -84,8 +84,15 @@ function generateMockWires(playerCount: 1 | 4 | 6 = 4) {
 
 function FullGameShowcase() {
   const [lastCutTargetId, setLastCutTargetId] = useState<string | null>(null);
-  const [selectedPendingDecisionColor, setSelectedPendingDecisionColor] =
-    useState<WireColor | null>("Green");
+  const [sceneMode, setSceneMode] = useState<"prep" | "targeting">("prep");
+  const [readyCount, setReadyCount] = useState(3);
+  const [previewRunToken, setPreviewRunToken] = useState(0);
+  const [previewWires, setPreviewWires] = useState(() => generateMockWires(6));
+  const [, setNextPreviewTurn] = useState(20);
+  const [autoRevealTargetId, setAutoRevealTargetId] = useState<string | null>(null);
+  const [autoRevealToken, setAutoRevealToken] = useState(0);
+  const previewTimeoutsRef = useRef<number[]>([]);
+  const isPreparationMode = sceneMode === "prep";
   const players = generateMockPlayers(6);
   const remainingCounts = [5, 4, 3, 5, 4, 3];
   players.forEach((player, index) => {
@@ -93,7 +100,7 @@ function FullGameShowcase() {
     player.isActiveTurnPlayer = player.id === "p1";
   });
 
-  const wires = generateMockWires(6);
+  const wires = previewWires;
   const hand: WireCard[] = [
     { kind: "Bomb", color: "Red" },
     { kind: "Defuse", color: "Green" },
@@ -101,9 +108,14 @@ function FullGameShowcase() {
     { kind: "Bomb", color: "Orange" },
     { kind: "Defuse", color: null },
   ];
-  const forcedTargetPlayerId = "p3";
-  const pendingDecisionColors: WireColor[] = ["Green", "Orange", "Blue"];
-  const cuttablePlayerIds = [forcedTargetPlayerId];
+  const readyPlayerIds = isPreparationMode
+    ? players.slice(0, Math.max(0, Math.min(readyCount, players.length))).map(
+        (player) => player.id,
+      )
+    : [];
+  const cuttablePlayerIds = isPreparationMode
+    ? []
+    : players.filter((player) => player.id !== "p1").map((player) => player.id);
   const lastCutTargetName =
     players.find((player) => player.id === lastCutTargetId)?.name ?? null;
 
@@ -115,10 +127,10 @@ function FullGameShowcase() {
     turnsTakenInRound: 4,
     roundTurnLimit: 8,
     activePlayerId: "p1",
-    isRoundPreparation: true,
-    readyPlayerIds: ["p1", "p2", "p3"],
-    forcedTargetPlayerIdForNextTurn: forcedTargetPlayerId,
-    forcedTargetPlayerNameForNextTurn: "Charlie",
+    isRoundPreparation: isPreparationMode,
+    readyPlayerIds,
+    forcedTargetPlayerIdForNextTurn: null,
+    forcedTargetPlayerNameForNextTurn: null,
     revealedDefuseWireCount: 3,
     defusedColors: ["Green", "Blue"] as WireColor[],
     revealedWires: wires,
@@ -136,12 +148,6 @@ function FullGameShowcase() {
     selectedBombColors: null,
   };
 
-  const mockPendingDecision = {
-    type: "ReactivateBlueColor" as const,
-    requestedByPlayerId: "p1",
-    availableColors: pendingDecisionColors,
-  };
-
   const effectCue = {
     round: 2,
     turn: 4,
@@ -150,15 +156,152 @@ function FullGameShowcase() {
     revealedFromPlayerId: "p2",
   };
 
+  useEffect(() => {
+    return () => {
+      previewTimeoutsRef.current.forEach((timeoutId) => {
+        window.clearTimeout(timeoutId);
+      });
+      previewTimeoutsRef.current = [];
+    };
+  }, []);
+
+  const clearPreviewTimers = () => {
+    previewTimeoutsRef.current.forEach((timeoutId) => {
+      window.clearTimeout(timeoutId);
+    });
+    previewTimeoutsRef.current = [];
+  };
+
+  const resetPreviewWires = () => {
+    setPreviewWires(generateMockWires(6));
+    setNextPreviewTurn(20);
+  };
+
+  const appendPreviewBombReveal = (targetPlayerId: string, color: WireColor) => {
+    setNextPreviewTurn((turn) => {
+      const revealTurn = turn;
+      setPreviewWires((currentWires) => [
+        ...currentWires,
+        {
+          round: 2,
+          turn: revealTurn,
+          activePlayerId: "p1",
+          revealedFromPlayerId: targetPlayerId,
+          card: {
+            kind: "Bomb" as const,
+            color,
+          },
+          effect: "Color bomb -> pile +1 preview",
+        },
+      ]);
+
+      return turn + 1;
+    });
+  };
+
+  const startDealPreview = () => {
+    clearPreviewTimers();
+    resetPreviewWires();
+    setSceneMode("prep");
+    setReadyCount(0);
+    setAutoRevealTargetId(null);
+    setAutoRevealToken(0);
+    setPreviewRunToken((token) => token + 1);
+  };
+
+  const startShufflePreview = () => {
+    clearPreviewTimers();
+    resetPreviewWires();
+    setSceneMode("prep");
+    setReadyCount(0);
+    setAutoRevealTargetId(null);
+    setAutoRevealToken(0);
+    setPreviewRunToken((token) => token + 1);
+    const allReadyTimeout = window.setTimeout(() => {
+      setReadyCount(players.length);
+    }, 950);
+    previewTimeoutsRef.current.push(allReadyTimeout);
+  };
+
+  const startCutPilePreview = () => {
+    clearPreviewTimers();
+    resetPreviewWires();
+    setSceneMode("targeting");
+    setAutoRevealTargetId(null);
+    setAutoRevealToken(0);
+    setPreviewRunToken((token) => token + 1);
+    const previewTimeout = window.setTimeout(() => {
+      const token = Date.now();
+      setAutoRevealTargetId("p2");
+      setAutoRevealToken(token);
+    }, 260);
+    previewTimeoutsRef.current.push(previewTimeout);
+  };
+
   return (
     <div className="gallery-section">
       <h2>Full Active Game UI</h2>
       <p className="gallery-hint">
-        Composite scene showing turn state, table, stats, decisions, hand, and history to
-        assess gameplay clutter.
+        Use preview controls to replay deal/shuffle animations on demand. Shuffle preview now
+        starts only after an all-ready transition is simulated.
       </p>
+      <div className="gallery-controls">
+        <label>
+          Mode:
+          <select
+            value={sceneMode}
+            onChange={(event) =>
+              setSceneMode(event.target.value as "prep" | "targeting")
+            }
+          >
+            <option value="prep">Prep hand lifecycle</option>
+            <option value="targeting">Reveal targeting + clippers</option>
+          </select>
+        </label>
+        {isPreparationMode && (
+          <label>
+            Ready players:
+            <select
+              value={readyCount}
+              onChange={(event) => setReadyCount(Number(event.target.value))}
+            >
+              {Array.from({ length: players.length + 1 }, (_, index) => (
+                <option key={`ready-${index}`} value={index}>
+                  {index}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        <div className="gallery-preview-actions" role="group" aria-label="Animation preview actions">
+          <button type="button" className="mode-button" onClick={startDealPreview}>
+            Preview deal
+          </button>
+          <button type="button" className="mode-button" onClick={startShufflePreview}>
+            Preview all-ready shuffle
+          </button>
+          <button
+            type="button"
+            className="mode-button"
+            onClick={() => {
+              clearPreviewTimers();
+              resetPreviewWires();
+              setSceneMode("targeting");
+              setAutoRevealTargetId(null);
+              setAutoRevealToken(0);
+              setPreviewRunToken((token) => token + 1);
+            }}
+          >
+            Preview target hover
+          </button>
+          <button type="button" className="mode-button" onClick={startCutPilePreview}>
+            Preview cut + pile +1
+          </button>
+        </div>
+      </div>
 
       <ActiveGameUi
+        key={`full-game-preview-${sceneMode}-${previewRunToken}`}
         players={players}
         currentPlayerId="p1"
         game={mockGame}
@@ -166,17 +309,17 @@ function FullGameShowcase() {
         myTeam="Sherlock"
         isMyTurn={true}
         activePlayerName="Alice"
-        canReveal={true}
+        canReveal={!isPreparationMode}
         busy={false}
         hubReady={true}
         visibleHand={hand}
-        isReadyForRound={true}
+        isReadyForRound={readyPlayerIds.includes("p1")}
         cuttablePlayerIds={cuttablePlayerIds}
-        pendingDecision={mockPendingDecision}
-        isPendingDecisionRequester={true}
+        pendingDecision={null}
+        isPendingDecisionRequester={false}
         pendingDecisionRequesterName="Alice"
-        selectedPendingDecisionColor={selectedPendingDecisionColor}
-        onSelectPendingDecisionColor={setSelectedPendingDecisionColor}
+        selectedPendingDecisionColor={null}
+        onSelectPendingDecisionColor={() => undefined}
         onSubmitPendingDecision={() => undefined}
         onRevealWire={(targetPlayerId) => {
           if (!cuttablePlayerIds.includes(targetPlayerId)) {
@@ -184,13 +327,17 @@ function FullGameShowcase() {
           }
 
           setLastCutTargetId(targetPlayerId);
+          appendPreviewBombReveal(targetPlayerId, "Red");
         }}
         onMarkRoundReady={() => undefined}
+        previewAutoRevealTargetId={autoRevealTargetId}
+        previewAutoRevealToken={autoRevealToken}
         effectCue={effectCue}
         effectActivePlayerName="Alice"
         effectRevealedFromPlayerName="Bob"
-        effectForcedTargetName={`Charlie${lastCutTargetName ? ` · last cut ${lastCutTargetName}` : ""}`}
-        showHandToggleButton={true}
+        effectForcedTargetName={
+          lastCutTargetName ? `Last cut target: ${lastCutTargetName}` : null
+        }
       />
     </div>
   );

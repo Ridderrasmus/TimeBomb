@@ -5,6 +5,7 @@ interface WireVisualCardProps {
   color?: string | null;
   compact?: boolean;
   subtitle?: string;
+  hiddenBack?: boolean;
 }
 
 const WIRE_COLOR_CLASS: Record<string, string> = {
@@ -21,12 +22,13 @@ export function WireVisualCard({
   color,
   compact = false,
   subtitle,
+  hiddenBack = false,
 }: WireVisualCardProps) {
   const colorClass = color ? WIRE_COLOR_CLASS[color] ?? "wire-color-none" : "wire-color-none";
 
   return (
     <div
-      className={`wire-visual-card ${kind === "Bomb" ? "kind-bomb" : "kind-defuse"} ${colorClass}${compact ? " compact" : ""}`}
+      className={`wire-visual-card ${kind === "Bomb" ? "kind-bomb" : "kind-defuse"} ${colorClass}${compact ? " compact" : ""}${hiddenBack ? " is-hidden-back" : ""}`}
     >
       <span className="wire-visual-swatch" aria-hidden="true" />
       <div className="wire-visual-body">

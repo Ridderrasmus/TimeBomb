@@ -203,6 +203,33 @@ public class TimeBombGameTests
     }
 
     [Fact]
+    public void RevealWire_DuplicateCommandFromSamePlayer_DoesNotDoubleCountBombColor()
+    {
+        var game = CreateGame(GameVariant.Standard);
+        var activePlayerId = game.GetActivePlayerId();
+        var targetPlayerId = game.Players.First(player => player.Id != activePlayerId).Id;
+
+        foreach (var player in game.Players)
+        {
+            player.WirePile = player.Id == targetPlayerId
+                ? [WireCard.Bomb(WireColor.Green)]
+                : [WireCard.Defuse()];
+        }
+
+        MarkAllPlayersReady(game);
+        _ = game.RevealWire(activePlayerId, targetPlayerId);
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            game.RevealWire(activePlayerId, targetPlayerId));
+
+        Assert.Equal("It is not this player's turn.", exception.Message);
+        Assert.Equal(1, game.RevealedBombsByColor[WireColor.Green]);
+        Assert.Single(
+            game.RevealedWires,
+            wire => wire.Card.Kind == WireKind.Bomb && wire.Card.Color == WireColor.Green);
+    }
+
+    [Fact]
     public void LobbyStateMapper_ToDto_LeavesSpecialEffectMetadataNull_InStandardVariant()
     {
         var game = CreateGame(GameVariant.Standard);

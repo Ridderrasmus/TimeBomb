@@ -89,7 +89,6 @@ export const selectActiveGameUiProps = (
     effectActivePlayerName: session.effectActivePlayerName,
     effectRevealedFromPlayerName: session.effectRevealedFromPlayerName,
     effectForcedTargetName: session.effectForcedTargetName,
-    showHandToggleButton: false,
   };
 };
 
