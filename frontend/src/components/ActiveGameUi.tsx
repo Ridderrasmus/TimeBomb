@@ -284,7 +284,14 @@ export function ActiveGameUi({
 
       revealRequestTargetRef.current = targetPlayerId;
       triggerCutDragAnimation(targetPlayerId);
-      onRevealWire(targetPlayerId);
+      const result: unknown = onRevealWire(targetPlayerId);
+      if (result instanceof Promise) {
+        result.finally(() => {
+          revealRequestTargetRef.current = null;
+        });
+      } else {
+        revealRequestTargetRef.current = null;
+      }
     },
     [busy, canReveal, cuttablePlayerIds, hubReady, onRevealWire, triggerCutDragAnimation],
   );
@@ -672,7 +679,7 @@ export function ActiveGameUi({
           </p>
         )}
 
-        <div className="table-hand-popup" role="dialog" aria-label="Your hand">
+        <div className="table-hand-popup" role="region" aria-label="Your hand">
           <div className="result prep-panel table-hand-popup-card">
             <p>
               <strong>
