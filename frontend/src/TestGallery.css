@@ -115,6 +115,13 @@
   flex-wrap: wrap;
 }
 
+.gallery-preview-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
 .gallery-controls label {
   display: flex;
   align-items: center;

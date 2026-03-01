@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import Markdown from "react-markdown";
@@ -43,12 +43,31 @@ export interface ActiveGameUiProps {
   onSubmitPendingDecision: () => void;
   onRevealWire: (targetPlayerId: string) => void;
   onMarkRoundReady: () => void;
+  previewAutoRevealTargetId?: string | null;
+  previewAutoRevealToken?: number;
   effectCue?: RecentEffectCue | null;
   effectActivePlayerName?: string | null;
   effectRevealedFromPlayerName?: string | null;
   effectForcedTargetName?: string | null;
-  showHandToggleButton?: boolean;
 }
+
+type ActiveRevealedWire = ActiveGameState["revealedWires"][number];
+
+const getRevealedWireIdentity = (wire: ActiveRevealedWire) =>
+  `${wire.round}:${wire.turn}:${wire.activePlayerId}:${wire.revealedFromPlayerId}`;
+
+const dedupeRevealedWires = (wires: ActiveGameState["revealedWires"]) => {
+  if (wires.length < 2) {
+    return wires;
+  }
+
+  const dedupedByIdentity = new Map<string, ActiveRevealedWire>();
+  for (const wire of wires) {
+    dedupedByIdentity.set(getRevealedWireIdentity(wire), wire);
+  }
+
+  return Array.from(dedupedByIdentity.values());
+};
 
 export function ActiveGameUi({
   players,
@@ -72,19 +91,58 @@ export function ActiveGameUi({
   onSubmitPendingDecision,
   onRevealWire,
   onMarkRoundReady,
-  showHandToggleButton = true,
+  previewAutoRevealTargetId = null,
+  previewAutoRevealToken = 0,
 }: ActiveGameUiProps) {
-  const [isHandPopupOpen, setIsHandPopupOpen] = useState(false);
   const [isHistoryDrawerOpen, setIsHistoryDrawerOpen] = useState(false);
   const [isRulesDrawerOpen, setIsRulesDrawerOpen] = useState(false);
   const [isPortalReady, setIsPortalReady] = useState(false);
   const [rulesMarkdown, setRulesMarkdown] = useState<string | null>(null);
   const [rulesMarkdownLoading, setRulesMarkdownLoading] = useState(false);
   const [rulesMarkdownError, setRulesMarkdownError] = useState<string | null>(null);
+  const [hoveredTargetPlayerId, setHoveredTargetPlayerId] = useState<string | null>(
+    null,
+  );
+  const [clippersPosition, setClippersPosition] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [cutDragCue, setCutDragCue] = useState<{
+    id: number;
+    startX: number;
+    startY: number;
+    deltaX: number;
+    deltaY: number;
+  } | null>(null);
+  const [bombPileCue, setBombPileCue] = useState<{
+    id: number;
+    color: WireColor;
+  } | null>(null);
+  const [localHandPhase, setLocalHandPhase] = useState<
+    "idle" | "dealing" | "hiding" | "shuffling" | "stacked"
+  >("idle");
+  const tableBoardRef = useRef<HTMLDivElement | null>(null);
+  const playerCardElementsRef = useRef<Map<string, HTMLLIElement>>(new Map());
+  const processedRevealCountRef = useRef(game.revealedWires.length);
+  const processedPreviewAutoRevealTokenRef = useRef(0);
+  const revealRequestTargetRef = useRef<string | null>(null);
   const rulesVariantSlug = rules.variant.toLowerCase();
   const rulesMarkdownPath = `/rules/${rulesVariantSlug}-game-rules.md`;
 
-  const canShowHandPopup = game.isRoundPreparation && visibleHand.length > 0;
+  const isRoundPreparation = game.isRoundPreparation;
+  const canShowPrepHand = isRoundPreparation && visibleHand.length > 0;
+  const allPlayersReadyForRound = players.length > 0 && game.readyPlayerIds.length >= players.length;
+  const currentPlayer = players.find((player) => player.id === currentPlayerId);
+  const hiddenHandPlaceholderCount = Math.max(
+    1,
+    Math.min(currentPlayer?.remainingWireCount ?? 0, 6),
+  );
+  const displayedHandCards: WireCard[] = canShowPrepHand
+    ? visibleHand
+    : Array.from({ length: hiddenHandPlaceholderCount }, () => ({
+        kind: "Defuse",
+        color: null,
+      }));
   const leftSidePlayers = players.filter((_, index) => index % 2 === 0);
   const rightSidePlayers = players.filter((_, index) => index % 2 === 1);
   const activeColorPiles =
@@ -93,9 +151,15 @@ export function ActiveGameUi({
       : rules.selectedBombColors && rules.selectedBombColors.length > 0
         ? Array.from(new Set(rules.selectedBombColors))
         : (["Green", "Orange", "Pink", "Yellow", "Blue", "Red"] as WireColor[]);
+  const uniqueRevealedWires = useMemo(
+    () => dedupeRevealedWires(game.revealedWires),
+    [game.revealedWires],
+  );
   const drawnByColor = activeColorPiles.reduce<Record<WireColor, number>>(
     (acc, color) => {
-      acc[color] = game.revealedWires.filter((wire) => wire.card.color === color).length;
+      acc[color] =
+        game.revealedBombsByColor?.[color]
+        ?? uniqueRevealedWires.filter((wire) => wire.card.color === color).length;
       return acc;
     },
     {
@@ -107,19 +171,166 @@ export function ActiveGameUi({
       Red: 0,
     },
   );
-  const defusePileCount = game.revealedWires.filter(
+  const defusePileCount = uniqueRevealedWires.filter(
     (wire) => wire.card.kind === "Defuse",
   ).length;
   const colorPileColumns = activeColorPiles.length <= 4 ? activeColorPiles.length : 3;
+  const compactHandReadyPlayerIds = useMemo(
+    () => {
+      if (isRoundPreparation) {
+        return allPlayersReadyForRound
+          ? players
+              .filter((player) => player.id !== currentPlayerId)
+              .map((player) => player.id)
+          : [];
+      }
 
-  useEffect(() => {
-    if (!canShowHandPopup) {
-      setIsHandPopupOpen(false);
+      if (canReveal) {
+        return players
+          .filter((player) => player.id !== currentPlayerId)
+          .map((player) => player.id);
+      }
+
+      return [];
+    },
+    [allPlayersReadyForRound, canReveal, currentPlayerId, isRoundPreparation, players],
+  );
+  const showCompactTargetPiles = isRoundPreparation || canReveal;
+
+  const setPlayerCardRef = useCallback(
+    (playerId: string, element: HTMLLIElement | null) => {
+      if (!element) {
+        playerCardElementsRef.current.delete(playerId);
+        return;
+      }
+
+      playerCardElementsRef.current.set(playerId, element);
+    },
+    [],
+  );
+
+  const handlePlayerHover = useCallback(
+    (playerId: string | null) => {
+      if (!canReveal || !playerId || !cuttablePlayerIds.includes(playerId)) {
+        setHoveredTargetPlayerId(null);
+        return;
+      }
+
+      setHoveredTargetPlayerId(playerId);
+    },
+    [canReveal, cuttablePlayerIds],
+  );
+
+  const updateClippersPosition = useCallback(() => {
+    if (
+      !canReveal ||
+      !hoveredTargetPlayerId ||
+      !cuttablePlayerIds.includes(hoveredTargetPlayerId)
+    ) {
+      setClippersPosition(null);
       return;
     }
 
-    setIsHandPopupOpen(true);
-  }, [canShowHandPopup]);
+    const boardElement = tableBoardRef.current;
+    const playerElement = playerCardElementsRef.current.get(hoveredTargetPlayerId);
+    if (!boardElement || !playerElement) {
+      setClippersPosition(null);
+      return;
+    }
+
+    const boardRect = boardElement.getBoundingClientRect();
+    const playerRect = playerElement.getBoundingClientRect();
+    setClippersPosition({
+      x: playerRect.right - boardRect.left - 17,
+      y: playerRect.top - boardRect.top + playerRect.height * 0.5 - 14,
+    });
+  }, [canReveal, cuttablePlayerIds, hoveredTargetPlayerId]);
+
+  const triggerCutDragAnimation = useCallback((targetPlayerId: string) => {
+    const boardElement = tableBoardRef.current;
+    const playerElement = playerCardElementsRef.current.get(targetPlayerId);
+    if (!boardElement || !playerElement) {
+      return;
+    }
+
+    const boardRect = boardElement.getBoundingClientRect();
+    const playerRect = playerElement.getBoundingClientRect();
+    const startX = playerRect.left - boardRect.left + Math.min(playerRect.width * 0.3, 64);
+    const startY = playerRect.top - boardRect.top + Math.max(playerRect.height * 0.72, 28);
+    const centerX = boardRect.width * 0.5;
+    const deltaX = (centerX - startX) * 0.46;
+    const deltaY = -26;
+
+    setCutDragCue({
+      id: Date.now() + Math.floor(Math.random() * 1000),
+      startX,
+      startY,
+      deltaX,
+      deltaY,
+    });
+  }, []);
+
+  const handleRevealTargetSelection = useCallback(
+    (targetPlayerId: string) => {
+      if (
+        !canReveal ||
+        busy ||
+        !hubReady ||
+        !cuttablePlayerIds.includes(targetPlayerId) ||
+        revealRequestTargetRef.current === targetPlayerId
+      ) {
+        return;
+      }
+
+      revealRequestTargetRef.current = targetPlayerId;
+      triggerCutDragAnimation(targetPlayerId);
+      const result: unknown = onRevealWire(targetPlayerId);
+      if (result instanceof Promise) {
+        result.finally(() => {
+          revealRequestTargetRef.current = null;
+        });
+      } else {
+        revealRequestTargetRef.current = null;
+      }
+    },
+    [busy, canReveal, cuttablePlayerIds, hubReady, onRevealWire, triggerCutDragAnimation],
+  );
+
+  useEffect(() => {
+    if (!isRoundPreparation) {
+      setLocalHandPhase("stacked");
+      return;
+    }
+
+    if (!canShowPrepHand) {
+      setLocalHandPhase("idle");
+      return;
+    }
+
+    if (!allPlayersReadyForRound) {
+      setLocalHandPhase("dealing");
+      return;
+    }
+
+    setLocalHandPhase("hiding");
+    const hideTimeoutId = window.setTimeout(() => {
+      setLocalHandPhase("shuffling");
+    }, 560);
+    const shuffleTimeoutId = window.setTimeout(() => {
+      setLocalHandPhase("stacked");
+    }, 1820);
+
+    return () => {
+      window.clearTimeout(hideTimeoutId);
+      window.clearTimeout(shuffleTimeoutId);
+    };
+  }, [
+    allPlayersReadyForRound,
+    canShowPrepHand,
+    game.currentRound,
+    isRoundPreparation,
+    visibleHand.length,
+  ]);
 
   useEffect(() => {
     setIsPortalReady(true);
@@ -183,7 +394,7 @@ export function ActiveGameUi({
             >
               Close
             </button>
-            <RevealedWireHistory wires={game.revealedWires} players={players} />
+            <RevealedWireHistory wires={uniqueRevealedWires} players={players} />
           </div>
         </aside>
       )}
@@ -232,6 +443,86 @@ export function ActiveGameUi({
     };
   }, [isRulesDrawerOpen, rulesMarkdownPath]);
 
+  useEffect(() => {
+    if (!canReveal) {
+      setHoveredTargetPlayerId(null);
+      revealRequestTargetRef.current = null;
+    }
+  }, [canReveal]);
+
+  useEffect(() => {
+    revealRequestTargetRef.current = null;
+  }, [uniqueRevealedWires.length]);
+
+  useEffect(() => {
+    updateClippersPosition();
+  }, [players, updateClippersPosition]);
+
+  useEffect(() => {
+    if (!clippersPosition) {
+      return;
+    }
+
+    const handleViewportChange = () => {
+      updateClippersPosition();
+    };
+
+    window.addEventListener("resize", handleViewportChange);
+    window.addEventListener("scroll", handleViewportChange, true);
+    return () => {
+      window.removeEventListener("resize", handleViewportChange);
+      window.removeEventListener("scroll", handleViewportChange, true);
+    };
+  }, [clippersPosition, updateClippersPosition]);
+
+  useEffect(() => {
+    const revealCount = uniqueRevealedWires.length;
+    if (revealCount <= processedRevealCountRef.current) {
+      processedRevealCountRef.current = revealCount;
+      return;
+    }
+
+    processedRevealCountRef.current = revealCount;
+    const latestReveal = uniqueRevealedWires[revealCount - 1];
+    if (latestReveal.card.kind !== "Bomb" || !latestReveal.card.color) {
+      return;
+    }
+
+    const cueId = Date.now() + revealCount;
+    setBombPileCue({
+      id: cueId,
+      color: latestReveal.card.color,
+    });
+
+    const timeoutId = window.setTimeout(() => {
+      setBombPileCue((currentCue) =>
+        currentCue?.id === cueId ? null : currentCue,
+      );
+    }, 1450);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [uniqueRevealedWires]);
+
+  useEffect(() => {
+    if (previewAutoRevealToken <= 0) {
+      processedPreviewAutoRevealTokenRef.current = 0;
+      return;
+    }
+
+    if (!previewAutoRevealTargetId) {
+      return;
+    }
+
+    if (processedPreviewAutoRevealTokenRef.current === previewAutoRevealToken) {
+      return;
+    }
+
+    processedPreviewAutoRevealTokenRef.current = previewAutoRevealToken;
+    handleRevealTargetSelection(previewAutoRevealTargetId);
+  }, [handleRevealTargetSelection, previewAutoRevealTargetId, previewAutoRevealToken]);
+
   return (
     <>
       <TurnStateProminence
@@ -249,21 +540,25 @@ export function ActiveGameUi({
         <p>
           <strong>Players ({players.length}):</strong>
         </p>
-        <div className="table-board-layout" aria-label="Game table layout">
+        <div
+          className="table-board-layout"
+          aria-label="Game table layout"
+          ref={tableBoardRef}
+        >
           <div className="table-side-column table-side-column-left">
             <PlayerStatusCards
               players={leftSidePlayers}
               currentPlayerId={currentPlayerId}
               forcedTargetPlayerId={game.forcedTargetPlayerIdForNextTurn}
               showWireCounts={true}
-              circularLayout={false}
-              onPlayerClick={(targetPlayerId) => {
-                if (!canReveal || !cuttablePlayerIds.includes(targetPlayerId)) {
-                  return;
-                }
-
-                onRevealWire(targetPlayerId);
+              compactHandAnimation={{
+                enabled: showCompactTargetPiles,
+                readyPlayerIds: compactHandReadyPlayerIds,
               }}
+              circularLayout={false}
+              onPlayerClick={handleRevealTargetSelection}
+              onPlayerHover={handlePlayerHover}
+              onPlayerCardRef={setPlayerCardRef}
               clickablePlayerIds={canReveal ? cuttablePlayerIds : []}
             />
           </div>
@@ -278,7 +573,7 @@ export function ActiveGameUi({
                 return (
                   <div
                     key={color}
-                    className={`table-pile-card table-pile-${color.toLowerCase()}`}
+                    className={`table-pile-card table-pile-${color.toLowerCase()}${bombPileCue?.color === color ? " is-bomb-reveal-highlight" : ""}`}
                     title={`${color} pile: ${drawnByColor[color]} cards revealed`}
                     aria-label={`${color} pile, ${drawnByColor[color]} cards revealed`}
                   >
@@ -300,6 +595,15 @@ export function ActiveGameUi({
                       </span>
                     )}
                     <span className="table-pile-count">{drawnByColor[color]}</span>
+                    {bombPileCue?.color === color && (
+                      <span
+                        key={`plus-${bombPileCue.id}`}
+                        className="table-pile-plus-one"
+                        aria-hidden="true"
+                      >
+                        +1
+                      </span>
+                    )}
                   </div>
                 );
               })}
@@ -320,17 +624,51 @@ export function ActiveGameUi({
               currentPlayerId={currentPlayerId}
               forcedTargetPlayerId={game.forcedTargetPlayerIdForNextTurn}
               showWireCounts={true}
-              circularLayout={false}
-              onPlayerClick={(targetPlayerId) => {
-                if (!canReveal || !cuttablePlayerIds.includes(targetPlayerId)) {
-                  return;
-                }
-
-                onRevealWire(targetPlayerId);
+              compactHandAnimation={{
+                enabled: showCompactTargetPiles,
+                readyPlayerIds: compactHandReadyPlayerIds,
               }}
+              circularLayout={false}
+              onPlayerClick={handleRevealTargetSelection}
+              onPlayerHover={handlePlayerHover}
+              onPlayerCardRef={setPlayerCardRef}
               clickablePlayerIds={canReveal ? cuttablePlayerIds : []}
             />
           </div>
+          {cutDragCue && (
+            <div
+              key={`cut-drag-${cutDragCue.id}`}
+              className="table-cut-drag-card"
+              style={
+                {
+                  "--cut-start-x": `${cutDragCue.startX}px`,
+                  "--cut-start-y": `${cutDragCue.startY}px`,
+                  "--cut-dx": `${cutDragCue.deltaX}px`,
+                  "--cut-dy": `${cutDragCue.deltaY}px`,
+                } as CSSProperties
+              }
+              aria-hidden="true"
+              onAnimationEnd={() => {
+                setCutDragCue((currentCue) =>
+                  currentCue?.id === cutDragCue.id ? null : currentCue,
+                );
+              }}
+            />
+          )}
+          {canReveal && clippersPosition && (
+            <div
+              className="table-hover-clippers"
+              style={
+                {
+                  "--clipper-x": `${clippersPosition.x}px`,
+                  "--clipper-y": `${clippersPosition.y}px`,
+                } as CSSProperties
+              }
+              aria-hidden="true"
+            >
+              ✂
+            </div>
+          )}
         </div>
 
         {!pendingDecision && !game.isRoundPreparation && (
@@ -341,40 +679,40 @@ export function ActiveGameUi({
           </p>
         )}
 
-        {canShowHandPopup && showHandToggleButton && (
-          <div className="players-panel-tools">
-            <button
-              type="button"
-              className="mode-button"
-              onClick={() => setIsHandPopupOpen((open) => !open)}
+        <div className="table-hand-popup" role="region" aria-label="Your hand">
+          <div className="result prep-panel table-hand-popup-card">
+            <p>
+              <strong>
+                {canShowPrepHand
+                  ? "Your current hand (before shuffle):"
+                  : "Your hand (hidden during turn phase):"}
+              </strong>
+            </p>
+            <ul
+              className={`wire-hand-fan hand-phase-${localHandPhase}${allPlayersReadyForRound ? " is-round-ready" : ""}`}
             >
-              {isHandPopupOpen ? "Hide hand" : "Show hand"}
-            </button>
-          </div>
-        )}
+              {displayedHandCards.map((card, index) => (
+                <li
+                  key={`${card.kind}-${card.color ?? "none"}-${index}`}
+                  className="wire-hand-card-item"
+                  style={{ "--fan-index": index } as CSSProperties}
+                >
+                  <WireVisualCard
+                    kind={card.kind}
+                    color={card.color}
+                    subtitle={canShowPrepHand ? `Card ${index + 1}` : undefined}
+                    hiddenBack={
+                      !canShowPrepHand
+                      || localHandPhase === "hiding"
+                      || localHandPhase === "shuffling"
+                      || localHandPhase === "stacked"
+                    }
+                  />
+                </li>
+              ))}
+            </ul>
 
-        {canShowHandPopup && isHandPopupOpen && (
-          <div className="table-hand-popup" role="dialog" aria-label="Your hand">
-            <div className="result prep-panel table-hand-popup-card">
-              <p>
-                <strong>Your current hand (before shuffle):</strong>
-              </p>
-              <ul className={`wire-hand-fan${isReadyForRound ? " is-round-ready" : ""}`}>
-                {visibleHand.map((card, index) => (
-                  <li
-                    key={`${card.kind}-${card.color ?? "none"}-${index}`}
-                    className="wire-hand-card-item"
-                    style={{ "--fan-index": index } as CSSProperties}
-                  >
-                    <WireVisualCard
-                      kind={card.kind}
-                      color={card.color}
-                      subtitle={`Card ${index + 1}`}
-                    />
-                  </li>
-                ))}
-              </ul>
-
+            {canShowPrepHand && (
               <button
                 type="button"
                 className="submit-button"
@@ -383,12 +721,14 @@ export function ActiveGameUi({
               >
                 {isReadyForRound ? "Ready submitted" : "I'm ready"}
               </button>
-              <p className="subtle">
-                When everyone is ready, hands are hidden and shuffled automatically.
-              </p>
-            </div>
+            )}
+            <p className="subtle">
+              {isRoundPreparation
+                ? "Hands are hidden and shuffled only after everyone is ready."
+                : "Hand box stays visible while turns play, with cards kept face-down."}
+            </p>
           </div>
-        )}
+        </div>
       </section>
 
       {pendingDecision && (

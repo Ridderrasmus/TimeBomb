@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import type { FormEvent } from "react";
 
 import { lobbyApi } from "../services/lobbyApi";
@@ -20,6 +20,8 @@ export interface GameActions {
 }
 
 export function useGameActions(session: LobbySession, isDevMode: boolean): GameActions {
+  const revealInFlightRef = useRef(false);
+
   const submit = useCallback(
     async (event: FormEvent) => {
       event.preventDefault();
@@ -208,10 +210,11 @@ export function useGameActions(session: LobbySession, isDevMode: boolean): GameA
 
   const revealWire = useCallback(
     async (targetPlayerId: string) => {
-      if (!session.currentLobby) {
+      if (!session.currentLobby || revealInFlightRef.current) {
         return;
       }
 
+      revealInFlightRef.current = true;
       session.setBusy(true);
       session.setError(null);
       try {
@@ -224,10 +227,11 @@ export function useGameActions(session: LobbySession, isDevMode: boolean): GameA
       } catch (err) {
         session.setError(err instanceof Error ? err.message : "Unable to reveal wire.");
       } finally {
+        revealInFlightRef.current = false;
         session.setBusy(false);
       }
     },
-    [session],
+    [session, revealInFlightRef],
   );
 
   const resolvePendingDecision = useCallback(
