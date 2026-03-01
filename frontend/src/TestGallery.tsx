@@ -88,7 +88,7 @@ function FullGameShowcase() {
   const [readyCount, setReadyCount] = useState(3);
   const [previewRunToken, setPreviewRunToken] = useState(0);
   const [previewWires, setPreviewWires] = useState(() => generateMockWires(6));
-  const [, setNextPreviewTurn] = useState(20);
+  const [nextPreviewTurn, setNextPreviewTurn] = useState(20);
   const [autoRevealTargetId, setAutoRevealTargetId] = useState<string | null>(null);
   const [autoRevealToken, setAutoRevealToken] = useState(0);
   const previewTimeoutsRef = useRef<number[]>([]);
@@ -178,25 +178,22 @@ function FullGameShowcase() {
   };
 
   const appendPreviewBombReveal = (targetPlayerId: string, color: WireColor) => {
-    setNextPreviewTurn((turn) => {
-      const revealTurn = turn;
-      setPreviewWires((currentWires) => [
-        ...currentWires,
-        {
-          round: 2,
-          turn: revealTurn,
-          activePlayerId: "p1",
-          revealedFromPlayerId: targetPlayerId,
-          card: {
-            kind: "Bomb" as const,
-            color,
-          },
-          effect: "Color bomb -> pile +1 preview",
+    setPreviewWires((currentWires) => [
+      ...currentWires,
+      {
+        round: 2,
+        turn: nextPreviewTurn,
+        activePlayerId: "p1",
+        revealedFromPlayerId: targetPlayerId,
+        card: {
+          kind: "Bomb" as const,
+          color,
         },
-      ]);
+        effect: "Color bomb -> pile +1 preview",
+      },
+    ]);
 
-      return turn + 1;
-    });
+    setNextPreviewTurn((turn) => turn + 1);
   };
 
   const startDealPreview = () => {
